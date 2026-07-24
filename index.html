@@ -87,7 +87,7 @@
             <col data-key="name_own"><col data-key="name_naver"><col data-key="model">
             <col data-key="content"><col data-key="image_usage">
             <col data-key="need_retail"><col data-key="need_wholesale"><col data-key="need_naver">
-            <col data-key="price_retail"><col data-key="price_wholesale"><col data-key="price_naver">
+            <col data-key="price_retail"><col data-key="price_wholesale"><col data-key="price_wholesale_master"><col data-key="price_naver">
             <col data-key="image"><col data-key="ref_link"><col data-key="note"><col data-key="act">
           </colgroup>
           <thead>
@@ -103,11 +103,11 @@
               <th rowspan="2" class="c-content" data-col="6">내용<i class="col-resizer"></i></th>
               <th rowspan="2" class="c-imguse" data-col="7">이미지 사용 여부<i class="col-resizer"></i></th>
               <th colspan="3" class="grp">등록 필요</th>
-              <th colspan="3" class="grp">가격</th>
-              <th rowspan="2" class="c-image" data-col="14">이미지<i class="col-resizer"></i></th>
-              <th rowspan="2" class="c-link" data-col="15">참고 링크<i class="col-resizer"></i></th>
-              <th rowspan="2" class="c-note" data-col="16">비고<i class="col-resizer"></i></th>
-              <th rowspan="2" class="c-act only-editor-cell" data-col="17">관리</th>
+              <th colspan="4" class="grp">가격</th>
+              <th rowspan="2" class="c-image" data-col="15">이미지<i class="col-resizer"></i></th>
+              <th rowspan="2" class="c-link" data-col="16">참고 링크<i class="col-resizer"></i></th>
+              <th rowspan="2" class="c-note" data-col="17">비고<i class="col-resizer"></i></th>
+              <th rowspan="2" class="c-act only-editor-cell" data-col="18">관리</th>
             </tr>
             <tr>
               <th class="sub c-name" data-col="3">자사몰<i class="col-resizer"></i></th>
@@ -116,8 +116,9 @@
               <th class="sub c-need" data-col="9">도매몰<i class="col-resizer"></i></th>
               <th class="sub c-need" data-col="10">네이버<i class="col-resizer"></i></th>
               <th class="sub c-price" data-col="11">소매몰<i class="col-resizer"></i></th>
-              <th class="sub c-price" data-col="12">도매몰<i class="col-resizer"></i></th>
-              <th class="sub c-price" data-col="13">네이버<i class="col-resizer"></i></th>
+              <th class="sub c-price grade" data-col="12">도매몰<small>베이직</small><i class="col-resizer"></i></th>
+              <th class="sub c-price grade" data-col="13">도매몰<small>마스터</small><i class="col-resizer"></i></th>
+              <th class="sub c-price" data-col="14">네이버<i class="col-resizer"></i></th>
             </tr>
           </thead>
           <tbody id="gridBody"></tbody>
@@ -152,6 +153,19 @@
     <div class="modal-foot">
       <button id="imCancel" class="btn">취소</button>
       <button id="imApply" class="btn btn-primary">불러오기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 저장하지 않고 이동할 때 확인 창 -->
+<div id="leaveModal" class="modal" hidden>
+  <div class="modal-box modal-box-sm">
+    <button id="lvClose" class="modal-x" title="닫기" aria-label="닫기">×</button>
+    <h3 class="modal-title">저장하지 않은 변경 사항이 있습니다</h3>
+    <p class="modal-desc">편집한 내용이 아직 저장되지 않았습니다.<br>어떻게 할까요?</p>
+    <div class="modal-foot modal-foot-leave">
+      <button id="lvDiscard" class="btn btn-danger-line">저장하지 않고 이동</button>
+      <button id="lvSave" class="btn btn-primary">저장하고 이동</button>
     </div>
   </div>
 </div>

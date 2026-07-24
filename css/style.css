@@ -174,6 +174,12 @@ body.view-registrar .meta-ro{display:block}
 .grid thead tr:nth-child(2) th{top:29px}
 .grid thead th.grp{background:#eef1f6;text-align:center}
 .grid thead th.sub{background:#f2f4f8;font-weight:600;color:var(--text-mute)}
+/* 도매몰 등급(베이직·마스터) 하위 머리글 */
+.grid thead th.grade{line-height:1.15}
+.grid thead th.grade small{
+  display:block;margin-top:1px;font-size:9.5px;font-weight:700;letter-spacing:.02em;
+  color:var(--brand);
+}
 
 .grid tbody td{
   border-bottom:1px solid var(--line);border-right:1px solid var(--line);
@@ -310,6 +316,17 @@ tr:hover .copy-btn{opacity:1}
 .modal-opts label{display:flex;align-items:center;gap:7px;cursor:pointer}
 .modal-hint{margin:0;font-size:11.5px;color:var(--text-mute)}
 .modal-foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+
+/* ===== 저장하지 않고 이동 확인 창 ===== */
+.modal-box-sm{width:min(440px,100%);position:relative}
+.modal-x{
+  position:absolute;top:12px;right:14px;border:0;background:transparent;
+  font-size:22px;line-height:1;color:var(--text-mute);cursor:pointer;padding:2px 6px;border-radius:6px;
+}
+.modal-x:hover{background:var(--bg);color:var(--text)}
+.modal-desc{margin:8px 0 4px;font-size:13px;color:var(--text-sub);line-height:1.55}
+.modal-foot-leave{margin-top:20px}
+.modal-foot-leave .btn{min-width:132px}
 
 /* ===== 토스트 ===== */
 .toast{

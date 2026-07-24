@@ -108,6 +108,7 @@ var Api = (function () {
           need_naver: it.need_naver || "",
           price_retail: it.price_retail,
           price_wholesale: it.price_wholesale,
+          price_wholesale_master: it.price_wholesale_master,
           price_naver: it.price_naver,
           image_url: it.image_url || "",
           ref_link: it.ref_link || "",

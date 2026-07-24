@@ -7,7 +7,7 @@ var UI = (function () {
     check: 58, seq: 84, brand: 130, name_own: 240, name_naver: 240, model: 140,
     content: 110, image_usage: 140,
     need_retail: 92, need_wholesale: 92, need_naver: 92,
-    price_retail: 120, price_wholesale: 120, price_naver: 120,
+    price_retail: 120, price_wholesale: 120, price_wholesale_master: 120, price_naver: 120,
     image: 84, ref_link: 110, note: 180, act: 62
   };
   var COL_W_KEY = "productTool.colWidths";
@@ -200,8 +200,8 @@ var UI = (function () {
                 : roTag(v, v === "필요" ? "need" : v === "불필요" ? "noneed" : "content")) + "</td>");
     });
 
-    // 가격 3종
-    ["price_retail", "price_wholesale", "price_naver"].forEach(function (f) {
+    // 가격 4종 (도매몰은 베이직·마스터 등급으로 분리)
+    ["price_retail", "price_wholesale", "price_wholesale_master", "price_naver"].forEach(function (f) {
       c.push('<td class="c-price">' +
         (editor ? priceInput(f, it[f])
                 : (it[f] === null || it[f] === undefined
@@ -254,7 +254,7 @@ var UI = (function () {
   function renderGrid() {
     var body = document.getElementById("gridBody");
     if (!State.items.length) {
-      var colspan = 18;
+      var colspan = 19;
       body.innerHTML = '<tr class="row-empty"><td colspan="' + colspan + '">' +
         (State.view === "editor"
           ? "아래 <b>+ 행 추가</b> 버튼으로 상품을 추가하세요."

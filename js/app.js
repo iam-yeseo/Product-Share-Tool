@@ -43,9 +43,9 @@ async function reloadCurrent() {
 }
 
 /* ---------- 뷰 전환 ---------- */
-function setView(v) {
+async function setView(v) {
   if (v === State.view) return;
-  if (State.view === "editor" && !confirmDiscard()) return;
+  if (State.view === "editor" && !(await confirmLeave())) return;
   State.view = v;
   document.body.classList.toggle("view-editor", v === "editor");
   document.body.classList.toggle("view-registrar", v === "registrar");
@@ -59,17 +59,19 @@ function setView(v) {
   reloadCurrent();
 }
 
-/* ---------- 저장 ---------- */
+/* ---------- 저장 ----------
+   성공하면 true, 저장하지 않았거나 실패하면 false 를 돌려줍니다.
+   ('저장하고 이동'에서 저장이 끝났는지 확인하는 데 사용합니다) */
 async function save() {
-  if (!State.list) return;
+  if (!State.list) return false;
   var author = (State.list.author || "").trim();
   var date = State.list.work_date || "";
-  if (!date) { toast("작성일을 입력해 주세요", "error"); document.getElementById("listDate").focus(); return; }
-  if (!author) { toast("작성자를 입력해 주세요", "error"); document.getElementById("listAuthor").focus(); return; }
+  if (!date) { toast("작성일을 입력해 주세요", "error"); document.getElementById("listDate").focus(); return false; }
+  if (!author) { toast("작성자를 입력해 주세요", "error"); document.getElementById("listAuthor").focus(); return false; }
 
   if (State.remoteChanged &&
       !confirm("편집하는 동안 다른 사람이 이 리스트를 수정했습니다.\n지금 저장하면 내 내용으로 덮어쓸 수 있습니다.\n\n계속 저장할까요?")) {
-    return;
+    return false;
   }
 
   var btn = document.getElementById("btnSave");
@@ -84,13 +86,57 @@ async function save() {
     toast("저장했습니다");
     await refreshSidebar();
     await reloadCurrent();
+    return true;
   } catch (e) {
     console.error(e);
     toast("저장 실패: " + (e.message || e), "error");
     btn.disabled = false;
+    return false;
   } finally {
     btn.textContent = "편집 완료 · 저장";
   }
+}
+
+/* ---------- 이동 전 확인 (저장하지 않고 이동 / 저장하고 이동) ----------
+   저장할 편집 내용이 없으면 바로 이동(true)합니다.
+   있으면 확인 창을 띄우고, 사용자의 선택 결과(이동해도 되는지)를 Promise 로 돌려줍니다. */
+var _leaveResolve = null;
+
+function confirmLeave() {
+  if (!State.dirty) return Promise.resolve(true);
+  return new Promise(function (resolve) {
+    _leaveResolve = resolve;
+    document.getElementById("leaveModal").hidden = false;
+  });
+}
+
+function closeLeaveModal(canLeave) {
+  document.getElementById("leaveModal").hidden = true;
+  var resolve = _leaveResolve;
+  _leaveResolve = null;
+  if (resolve) resolve(canLeave);
+}
+
+function bindLeaveModal() {
+  var modal = document.getElementById("leaveModal");
+
+  // 저장하지 않고 이동 — 편집 내용을 버리고 이동합니다.
+  document.getElementById("lvDiscard").addEventListener("click", function () {
+    closeLeaveModal(true);
+  });
+
+  // 저장하고 이동 — 저장에 성공해야 이동합니다. (작성일·작성자 누락 등으로 실패하면 머무릅니다)
+  document.getElementById("lvSave").addEventListener("click", async function () {
+    var ok = await save();
+    closeLeaveModal(ok);
+  });
+
+  // 닫기(×)·바깥 클릭·ESC = 취소(머무르기)
+  document.getElementById("lvClose").addEventListener("click", function () { closeLeaveModal(false); });
+  modal.addEventListener("click", function (e) { if (e.target === modal) closeLeaveModal(false); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape" && !modal.hidden) closeLeaveModal(false);
+  });
 }
 
 /* ---------- 행 조작 ---------- */
@@ -197,7 +243,7 @@ function bindEvents() {
   });
 
   document.getElementById("btnNewList").addEventListener("click", async function () {
-    if (!confirmDiscard()) return;
+    if (!(await confirmLeave())) return;
     var title = prompt("새 리스트 이름을 입력하세요", fmtDate(new Date()) + " 상품 등록 요청");
     if (title === null) return;
     try {
@@ -216,11 +262,11 @@ function bindEvents() {
     }
   });
 
-  document.getElementById("listNav").addEventListener("click", function (e) {
+  document.getElementById("listNav").addEventListener("click", async function (e) {
     var btn = e.target.closest(".list-item");
     if (!btn) return;
     if (btn.dataset.id === State.currentListId) { closeSidebar(); return; }
-    if (!confirmDiscard()) return;
+    if (!(await confirmLeave())) return;
     loadList(btn.dataset.id);
     closeSidebar();
   });
@@ -570,6 +616,7 @@ function onRemote() {
   bindEvents();
   bindColumnResize();
   bindImport();
+  bindLeaveModal();
   UI.applyColWidths();
   UI.setSync("연결 중…");
   await refreshSidebar();

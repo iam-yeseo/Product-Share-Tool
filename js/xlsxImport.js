@@ -14,7 +14,7 @@ var XlsxImport = (function () {
   /* 머리글 줄을 찾을 때 쓰는 단어 */
   var HEADER_HINTS = ["브랜드", "모델", "품명", "상품명", "제품명", "내용", "링크", "비고", "이미지", "가격", "등록"];
   /* 두 번째 머리글 줄(하위 항목)을 판별할 때 쓰는 단어 */
-  var SUB_HINTS = ["자사몰", "네이버", "스마트", "스토어", "소매", "도매", "전용"];
+  var SUB_HINTS = ["자사몰", "네이버", "스마트", "스토어", "소매", "도매", "전용", "베이직", "마스터"];
 
   function norm(v) {
     return String(v == null ? "" : v).replace(/\s+/g, "").replace(/[.\-_()[\]/]/g, "").toLowerCase();
@@ -105,7 +105,8 @@ var XlsxImport = (function () {
     need_wholesale: "등록 필요(도매몰)",
     need_naver: "등록 필요(네이버)",
     price_retail: "가격(소매몰)",
-    price_wholesale: "가격(도매몰)",
+    price_wholesale: "가격(도매몰 베이직)",
+    price_wholesale_master: "가격(도매몰 마스터)",
     price_naver: "가격(네이버)",
     ref_link: "참고 링크",
     note: "비고",
@@ -141,7 +142,13 @@ var XlsxImport = (function () {
 
     if (has(p, ["가격", "판매가", "단가", "소비자가", "공급가"])) {
       if (has(s, ["소매"])) return ["price_retail"];
-      if (has(s, ["도매"])) return ["price_wholesale"];
+      if (has(s, ["도매"])) {
+        // 도매몰은 등급별 차등가 — 베이직 / 마스터로 나뉩니다.
+        if (has(s, ["마스터", "master"])) return ["price_wholesale_master"];
+        return ["price_wholesale"];                              // 도매몰 기본(베이직)
+      }
+      if (has(s, ["마스터", "master"])) return ["price_wholesale_master"];
+      if (has(s, ["베이직", "basic"])) return ["price_wholesale"];
       if (has(s, ["네이버", "스마트", "스토어"])) return ["price_naver"];
       if (has(s, ["자사"])) return ["price_retail"];
       return ["price_retail"];                                   // 하위 구분이 없으면 소매몰 가격

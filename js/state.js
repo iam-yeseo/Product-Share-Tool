@@ -50,7 +50,8 @@ function makeItem(seq) {
     need_wholesale: DEFAULT_NEED,
     need_naver: DEFAULT_NEED,
     price_retail: null,
-    price_wholesale: null,
+    price_wholesale: null,          // 도매몰 · 베이직
+    price_wholesale_master: null,   // 도매몰 · 마스터
     price_naver: null,
     image_url: "",
     ref_link: "",
@@ -64,7 +65,7 @@ function makeItem(seq) {
 var COPY_FIELDS = [
   "brand", "name_own", "name_naver", "model", "content", "image_usage",
   "need_retail", "need_wholesale", "need_naver",
-  "price_retail", "price_wholesale", "price_naver",
+  "price_retail", "price_wholesale", "price_wholesale_master", "price_naver",
   "image_url", "ref_link", "note"
 ];
 function copyItem(src) {
@@ -91,10 +92,4 @@ function setDirty(v) {
 function hasUnsavedWork() {
   if (State.dirty) return true;
   return State.items.some(function (it) { return !State.baseItemIds[it.id]; });
-}
-
-/* 편집 중인 내용을 버려도 되는지 확인 */
-function confirmDiscard() {
-  if (!State.dirty) return true;
-  return confirm("저장하지 않은 편집 내용이 있습니다.\n저장하지 않고 이동하면 변경 사항이 사라집니다.\n\n이동할까요?");
 }
