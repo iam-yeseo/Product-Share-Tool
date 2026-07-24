@@ -2,6 +2,59 @@
 
 var UI = (function () {
 
+  /* ---------- 열 너비 (마우스로 조절, 브라우저에 기억) ---------- */
+  var DEFAULT_COL_W = {
+    check: 58, seq: 84, brand: 130, name_own: 240, name_naver: 240, model: 140,
+    content: 110, image_usage: 140,
+    need_retail: 92, need_wholesale: 92, need_naver: 92,
+    price_retail: 120, price_wholesale: 120, price_naver: 120,
+    image: 84, ref_link: 110, note: 180, act: 62
+  };
+  var COL_W_KEY = "productTool.colWidths";
+  var colW = (function () {
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem(COL_W_KEY) || "{}"); } catch (e) { saved = {}; }
+    var out = {};
+    Object.keys(DEFAULT_COL_W).forEach(function (k) {
+      out[k] = typeof saved[k] === "number" ? saved[k] : DEFAULT_COL_W[k];
+    });
+    return out;
+  })();
+
+  function colKeyAt(index) {
+    var col = document.querySelectorAll("#gridCols col")[index];
+    return col ? col.dataset.key : null;
+  }
+  function colWidthOf(key) {
+    return colW[key] || DEFAULT_COL_W[key] || 100;
+  }
+  function applyColWidths() {
+    var cols = document.querySelectorAll("#gridCols col");
+    var total = 0;
+    cols.forEach(function (col) {
+      var k = col.dataset.key;
+      var w = colWidthOf(k);
+      if (k === "act" && State.view !== "editor") w = 0;   // 등록자 뷰에서는 관리 열이 없습니다
+      col.style.width = w + "px";
+      total += w;
+    });
+    var grid = document.getElementById("grid");
+    if (grid) grid.style.width = total + "px";
+    document.documentElement.style.setProperty("--seq-left", colWidthOf("check") + "px");
+  }
+  function setColWidth(key, w) {
+    colW[key] = Math.max(56, Math.round(w));
+    applyColWidths();
+  }
+  function saveColWidths() {
+    try { localStorage.setItem(COL_W_KEY, JSON.stringify(colW)); } catch (e) { /* 무시 */ }
+  }
+  function resetColWidths() {
+    Object.keys(DEFAULT_COL_W).forEach(function (k) { colW[k] = DEFAULT_COL_W[k]; });
+    applyColWidths();
+    saveColWidths();
+  }
+
   /* ---------- 사이드바 ---------- */
   function renderSidebar() {
     var nav = document.getElementById("listNav");
@@ -92,14 +145,24 @@ var UI = (function () {
   /* ---------- 행 ---------- */
   function renderRow(it, idx) {
     var editor = State.view === "editor";
-    var cls = "row" + (it.done ? " is-done" : "");
+    var selected = editor && !!State.selected[it.id];
+    var cls = "row" + (it.done ? " is-done" : "") + (selected ? " is-selected" : "");
     var c = [];
 
-    // 체크 — 등록자만 조작 가능
-    c.push('<td class="c-check">' +
-      '<input type="checkbox" class="chk-done"' + (it.done ? " checked" : "") +
-      (editor ? " disabled" : "") + ' title="' +
-      (editor ? "등록자만 체크할 수 있습니다" : "등록 완료 체크") + '"></td>');
+    // 체크
+    //  - 등록자 : 등록 완료 체크 (즉시 저장, 행이 회색으로)
+    //  - 편집자 : 행 선택용. 등록 완료 상태는 바뀌지 않고, 행 복사/삭제 대상만 고릅니다.
+    if (editor) {
+      c.push('<td class="c-check">' +
+        '<input type="checkbox" class="chk-sel"' + (selected ? " checked" : "") +
+        ' title="행 선택 (복사·삭제용, 등록 상태는 바뀌지 않습니다)">' +
+        (it.done ? '<span class="done-mark" title="등록 완료된 행입니다">✓</span>' : "") +
+        "</td>");
+    } else {
+      c.push('<td class="c-check">' +
+        '<input type="checkbox" class="chk-done"' + (it.done ? " checked" : "") +
+        ' title="등록 완료 체크"></td>');
+    }
 
     // 순번
     if (editor) {
@@ -159,7 +222,7 @@ var UI = (function () {
       var url = normalizeUrl(it.ref_link);
       c.push('<td class="c-link">' + (url
         ? '<button class="btn-go" data-url="' + esc(url) + '">바로가기</button>'
-        : '<span class="ro-empty">—</span>') + "</td>");
+        : ro(it.ref_link, true)) + "</td>");   // 웹 주소가 아니면(사내 경로 등) 텍스트 + 복사
     }
 
     // 비고
@@ -172,6 +235,22 @@ var UI = (function () {
     return '<tr class="' + cls + '" data-id="' + esc(it.id) + '">' + c.join("") + "</tr>";
   }
 
+  /* 선택 개수에 따라 툴바(행 복사·행 삭제) 상태를 갱신 */
+  function renderToolbar() {
+    var n = selectedCount();
+    var label = document.getElementById("selCount");
+    var copyBtn = document.getElementById("btnCopyRows");
+    var delBtn = document.getElementById("btnDeleteRows");
+    var all = document.getElementById("chkAll");
+    if (label) label.textContent = n ? "선택 " + n + "건" : "행을 체크하면 복사·삭제할 수 있습니다";
+    if (copyBtn) copyBtn.disabled = n === 0;
+    if (delBtn) delBtn.disabled = n === 0;
+    if (all) {
+      all.checked = n > 0 && n === State.items.length;
+      all.indeterminate = n > 0 && n < State.items.length;
+    }
+  }
+
   function renderGrid() {
     var body = document.getElementById("gridBody");
     if (!State.items.length) {
@@ -180,9 +259,11 @@ var UI = (function () {
         (State.view === "editor"
           ? "아래 <b>+ 행 추가</b> 버튼으로 상품을 추가하세요."
           : "등록된 상품이 없습니다.") + "</td></tr>";
+      renderToolbar();
       return;
     }
     body.innerHTML = State.items.map(renderRow).join("");
+    renderToolbar();
   }
 
   function renderAll() {
@@ -193,6 +274,7 @@ var UI = (function () {
     if (has) {
       renderHead();
       renderGrid();
+      applyColWidths();
     }
   }
 
@@ -207,6 +289,13 @@ var UI = (function () {
     renderSidebar: renderSidebar,
     renderGrid: renderGrid,
     renderHead: renderHead,
-    setSync: setSync
+    renderToolbar: renderToolbar,
+    setSync: setSync,
+    applyColWidths: applyColWidths,
+    setColWidth: setColWidth,
+    saveColWidths: saveColWidths,
+    resetColWidths: resetColWidths,
+    colKeyAt: colKeyAt,
+    colWidthOf: colWidthOf
   };
 })();

@@ -60,7 +60,9 @@ function normalizeUrl(raw) {
   var s = String(raw == null ? "" : raw).trim();
   if (!s) return "";
   if (/^https?:\/\//i.test(s)) return s;
-  if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return ""; // 알 수 없는 스킴은 차단
+  if (/^[a-z][a-z0-9+.-]*:/i.test(s)) return "";   // 알 수 없는 스킴은 차단
+  if (/^[\\/]/.test(s)) return "";                 // \\서버\경로 같은 사내 경로는 링크로 열지 않습니다
+  if (!/^[\w가-힣-]+(\.[\w-]+)+/.test(s)) return "";// 도메인 형태가 아니면 링크 아님
   return "https://" + s;
 }
 

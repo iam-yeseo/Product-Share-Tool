@@ -11,13 +11,29 @@ var State = {
   items: [],             // 현재 리스트 행(초안)
   baseIds: [],           // 마지막으로 서버에서 읽어온 행 id 목록 (삭제 판별용)
   baseItemIds: {},       // id -> true (신규/기존 행 판별용)
+  selected: {},          // 편집자 뷰에서 체크한 행 (id -> true) — 등록 완료 상태와 무관
   dirty: false,
   remoteChanged: false   // 편집 중 다른 사람이 서버 데이터를 바꿨는지
 };
 
+/* 체크된 행 개수 / 목록 */
+function selectedCount() {
+  return State.items.filter(function (it) { return State.selected[it.id]; }).length;
+}
+function selectedItems() {
+  return State.items.filter(function (it) { return State.selected[it.id]; });
+}
+function clearSelection() {
+  State.selected = {};
+}
+
 /* 내용 / 등록 필요 선택지 */
 var CONTENT_OPTIONS = ["신규 제품", "기존 제품", "기타"];
 var NEED_OPTIONS = ["필요", "불필요"];
+
+/* 새 행을 추가할 때 미리 채워지는 값 */
+var DEFAULT_CONTENT = "신규 제품";
+var DEFAULT_NEED = "필요";
 
 /* 새 행 기본값 */
 function makeItem(seq) {
@@ -28,11 +44,11 @@ function makeItem(seq) {
     name_own: "",
     name_naver: "",
     model: "",
-    content: "",
+    content: DEFAULT_CONTENT,
     image_usage: "",
-    need_retail: "",
-    need_wholesale: "",
-    need_naver: "",
+    need_retail: DEFAULT_NEED,
+    need_wholesale: DEFAULT_NEED,
+    need_naver: DEFAULT_NEED,
     price_retail: null,
     price_wholesale: null,
     price_naver: null,
@@ -42,6 +58,19 @@ function makeItem(seq) {
     done: false,
     done_at: null
   };
+}
+
+/* 행 복사 — 새 id 를 받고, 등록 완료 상태는 물려받지 않습니다. */
+var COPY_FIELDS = [
+  "brand", "name_own", "name_naver", "model", "content", "image_usage",
+  "need_retail", "need_wholesale", "need_naver",
+  "price_retail", "price_wholesale", "price_naver",
+  "image_url", "ref_link", "note"
+];
+function copyItem(src) {
+  var it = makeItem(0);
+  COPY_FIELDS.forEach(function (f) { it[f] = src[f]; });
+  return it;
 }
 
 /* 순번 1..n 로 다시 매기기 */

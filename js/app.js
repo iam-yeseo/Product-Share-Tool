@@ -27,6 +27,7 @@ async function loadList(id) {
     State.items = await Api.fetchItems(id);
     State.baseItemIds = {};
     State.items.forEach(function (it) { State.baseItemIds[it.id] = true; });
+    clearSelection();
     removedIds = [];
     State.remoteChanged = false;
     setDirty(false);
@@ -52,7 +53,9 @@ function setView(v) {
     b.classList.toggle("is-active", b.dataset.view === v);
   });
   setDirty(false);
+  clearSelection();
   removedIds = [];
+  UI.applyColWidths();
   reloadCurrent();
 }
 
@@ -134,11 +137,48 @@ function deleteRow(idx) {
   var it = State.items[idx];
   if (!confirm((it.brand || it.name_own || "이 행") + " 을(를) 삭제할까요?")) return;
   if (State.baseItemIds[it.id]) removedIds.push(it.id);
+  delete State.selected[it.id];
   State.items.splice(idx, 1);
   renumber();
   setDirty(true);
   UI.renderGrid();
   UI.renderHead();
+}
+
+/* ---------- 체크한 행 일괄 처리 (편집자 전용) ---------- */
+function copySelectedRows() {
+  var n = selectedCount();
+  if (!n) { toast("복사할 행을 체크해 주세요", "warn"); return; }
+
+  // 뒤에서부터 넣어야 인덱스가 밀리지 않습니다. 복사본은 원본 바로 아래에 들어갑니다.
+  for (var i = State.items.length - 1; i >= 0; i--) {
+    var it = State.items[i];
+    if (!State.selected[it.id]) continue;
+    State.items.splice(i + 1, 0, copyItem(it));
+  }
+  clearSelection();
+  renumber();
+  setDirty(true);
+  UI.renderGrid();
+  UI.renderHead();
+  toast(n + "개 행을 복사했습니다");
+}
+
+function deleteSelectedRows() {
+  var targets = selectedItems();
+  if (!targets.length) { toast("삭제할 행을 체크해 주세요", "warn"); return; }
+  if (!confirm("체크한 " + targets.length + "개 행을 삭제할까요?\n저장하면 되돌릴 수 없습니다.")) return;
+
+  targets.forEach(function (it) {
+    if (State.baseItemIds[it.id]) removedIds.push(it.id);
+  });
+  State.items = State.items.filter(function (it) { return !State.selected[it.id]; });
+  clearSelection();
+  renumber();
+  setDirty(true);
+  UI.renderGrid();
+  UI.renderHead();
+  toast(targets.length + "개 행을 삭제했습니다");
 }
 
 /* ---------- 이벤트 등록 ---------- */
@@ -185,8 +225,14 @@ function bindEvents() {
     closeSidebar();
   });
 
+  /* 햄버거 — 좁은 화면에서는 열고/닫고, 넓은 화면에서는 접고/펴기 */
   document.getElementById("btnSidebar").addEventListener("click", function () {
-    document.body.classList.toggle("sidebar-open");
+    if (isNarrow()) {
+      document.body.classList.toggle("sidebar-open");
+    } else {
+      var collapsed = document.body.classList.toggle("sidebar-collapsed");
+      try { localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0"); } catch (e) { /* 무시 */ }
+    }
   });
   document.getElementById("sidebarDim").addEventListener("click", closeSidebar);
 
@@ -224,6 +270,17 @@ function bindEvents() {
   });
 
   document.getElementById("btnAddRow").addEventListener("click", addRow);
+  document.getElementById("btnCopyRows").addEventListener("click", copySelectedRows);
+  document.getElementById("btnDeleteRows").addEventListener("click", deleteSelectedRows);
+
+  /* 전체 선택 / 해제 */
+  document.getElementById("chkAll").addEventListener("change", function (e) {
+    clearSelection();
+    if (e.target.checked) {
+      State.items.forEach(function (it) { State.selected[it.id] = true; });
+    }
+    UI.renderGrid();
+  });
 
   /* 표 — 입력 */
   var body = document.getElementById("gridBody");
@@ -255,6 +312,15 @@ function bindEvents() {
     var idx = findIndex(tr.dataset.id);
     if (idx < 0) return;
     var it = State.items[idx];
+
+    /* 행 선택 — 편집자 전용. 등록 완료 상태는 건드리지 않습니다. */
+    if (e.target.classList.contains("chk-sel")) {
+      if (e.target.checked) State.selected[it.id] = true;
+      else delete State.selected[it.id];
+      tr.classList.toggle("is-selected", e.target.checked);
+      UI.renderToolbar();
+      return;
+    }
 
     /* 등록 완료 체크 — 등록자 전용, 즉시 저장 */
     if (e.target.classList.contains("chk-done")) {
@@ -325,6 +391,149 @@ function closeSidebar() {
   document.body.classList.remove("sidebar-open");
 }
 
+var SIDEBAR_KEY = "productTool.sidebarCollapsed";
+function isNarrow() {
+  return window.matchMedia("(max-width: 900px)").matches;
+}
+function restoreSidebar() {
+  var v = null;
+  try { v = localStorage.getItem(SIDEBAR_KEY); } catch (e) { v = null; }
+  if (v === "1") document.body.classList.add("sidebar-collapsed");
+}
+
+/* ---------- 열 너비 드래그 ---------- */
+function bindColumnResize() {
+  var head = document.querySelector("#grid thead");
+  if (!head) return;
+
+  head.addEventListener("mousedown", function (e) {
+    var handle = e.target.closest(".col-resizer");
+    if (!handle) return;
+    var th = handle.closest("th[data-col]");
+    if (!th) return;
+
+    var key = UI.colKeyAt(Number(th.dataset.col));
+    if (!key) return;
+
+    e.preventDefault();
+    var startX = e.clientX;
+    var startW = UI.colWidthOf(key);
+    handle.classList.add("is-active");
+    document.body.classList.add("resizing");
+
+    function onMove(ev) { UI.setColWidth(key, startW + (ev.clientX - startX)); }
+    function onUp() {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+      handle.classList.remove("is-active");
+      document.body.classList.remove("resizing");
+      UI.saveColWidths();
+    }
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  });
+
+  /* 손잡이를 더블클릭하면 모든 열을 기본 너비로 */
+  head.addEventListener("dblclick", function (e) {
+    if (!e.target.closest(".col-resizer")) return;
+    UI.resetColWidths();
+    toast("열 너비를 기본값으로 되돌렸습니다");
+  });
+}
+
+/* ---------- 엑셀 불러오기 ---------- */
+var pendingImport = null;
+
+function bindImport() {
+  document.getElementById("btnImport").addEventListener("click", function () {
+    if (!State.currentListId) { toast("먼저 리스트를 만들거나 선택해 주세요", "warn"); return; }
+    document.getElementById("fileInput").click();
+  });
+
+  document.getElementById("fileInput").addEventListener("change", async function (e) {
+    var file = e.target.files && e.target.files[0];
+    e.target.value = "";                       // 같은 파일을 다시 고를 수 있도록 비웁니다
+    if (!file) return;
+    try {
+      var res = await XlsxImport.parseFile(file);
+      if (!res.items.length) {
+        toast("가져올 상품 행을 찾지 못했습니다", "error");
+        return;
+      }
+      pendingImport = res;
+      showImportModal(file.name, res);
+    } catch (err) {
+      console.error(err);
+      toast("엑셀을 읽지 못했습니다: " + (err.message || err), "error");
+    }
+  });
+
+  document.getElementById("imCancel").addEventListener("click", closeImportModal);
+  document.getElementById("imApply").addEventListener("click", applyImport);
+  document.getElementById("importModal").addEventListener("click", function (e) {
+    if (e.target.id === "importModal") closeImportModal();
+  });
+}
+
+function showImportModal(fileName, res) {
+  document.getElementById("imFile").textContent = fileName;
+
+  var stat =
+    '<div class="im-stat">' +
+      "<span>시트 <b>" + esc(res.sheetName) + "</b></span>" +
+      "<span>머리글 <b>" + res.headerRow + (res.subHeaderRow ? "~" + res.subHeaderRow : "") + "행</b></span>" +
+      "<span>상품 <b>" + res.items.length + "개</b></span>" +
+      (res.workDate ? "<span>작성일 <b>" + esc(res.workDate) + "</b></span>" : "") +
+    "</div>";
+
+  var map = '<ul class="im-map">' + res.mappings.map(function (m) {
+    return "<li>" +
+      '<span class="im-from">' + esc(m.label) + "</span>" +
+      '<span class="im-arrow">→</span>' +
+      '<span class="im-to">' + esc(m.to) + "</span>" +
+    "</li>";
+  }).join("") + "</ul>";
+
+  var ignored = res.ignored.length
+    ? '<p class="im-ignored">가져오지 않는 열 : ' +
+      res.ignored.map(function (m) { return esc(m.label); }).join(", ") + "</p>"
+    : "";
+
+  document.getElementById("imSummary").innerHTML = stat + map + ignored;
+  document.getElementById("importModal").hidden = false;
+}
+
+function closeImportModal() {
+  document.getElementById("importModal").hidden = true;
+  pendingImport = null;
+}
+
+function applyImport() {
+  if (!pendingImport || !State.list) return;
+  var mode = document.querySelector('input[name="imMode"]:checked').value;
+  var items = pendingImport.items;
+
+  if (mode === "replace") {
+    State.items.forEach(function (it) {
+      if (State.baseItemIds[it.id]) removedIds.push(it.id);
+    });
+    State.items = items;
+  } else {
+    State.items = State.items.concat(items);
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(pendingImport.workDate || "") && !State.list.work_date) {
+    State.list.work_date = pendingImport.workDate;
+  }
+
+  clearSelection();
+  renumber();
+  setDirty(true);
+  closeImportModal();
+  UI.renderAll();
+  toast(items.length + "개 행을 불러왔습니다 — 확인 후 저장하세요");
+}
+
 /* ---------- 실시간 동기화 ---------- */
 var _syncTimer = null;
 function startRealtime() {
@@ -357,7 +566,11 @@ function onRemote() {
 /* ---------- 시작 ---------- */
 (async function init() {
   document.body.classList.add("view-editor");
+  restoreSidebar();
   bindEvents();
+  bindColumnResize();
+  bindImport();
+  UI.applyColWidths();
   UI.setSync("연결 중…");
   await refreshSidebar();
   UI.renderAll();
