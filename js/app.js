@@ -328,6 +328,30 @@ function bindEvents() {
     UI.renderGrid();
   });
 
+  /* 머리글 일괄 체크 — 등록 필요(소매·도매·네이버) / 네이버 가격 연동 (편집자 전용) */
+  document.querySelector("#grid thead").addEventListener("change", function (e) {
+    if (State.view !== "editor") return;
+
+    if (e.target.classList.contains("chk-need-all")) {
+      var field = e.target.dataset.field;
+      var on = e.target.checked;
+      State.items.forEach(function (it) { it[field] = on ? "필요" : "불필요"; });
+      setDirty(true);
+      UI.renderGrid();
+      return;
+    }
+    if (e.target.classList.contains("chk-link-all")) {
+      var link = e.target.checked;
+      State.items.forEach(function (it) {
+        it.link_np = link;
+        if (link) it.price_naver = it.price_retail;
+      });
+      setDirty(true);
+      UI.renderGrid();
+      return;
+    }
+  });
+
   /* 표 — 입력 */
   var body = document.getElementById("gridBody");
 
@@ -343,10 +367,17 @@ function bindEvents() {
       var formatted = withComma(e.target.value);
       e.target.value = formatted;
       it[f] = toNumberOrNull(formatted);
+      // 소매몰 가격이 네이버와 연동되어 있으면 함께 갱신합니다.
+      if (f === "price_retail" && it.link_np !== false) {
+        it.price_naver = it.price_retail;
+        var naverInput = tr.querySelector('.cell-price[data-field="price_naver"]');
+        if (naverInput) naverInput.value = withComma(it.price_naver);
+      }
       setDirty(true);
       return;
     }
-    if (f && f !== "seq") {
+    // 텍스트 셀만 처리합니다. (체크박스는 change 에서 다룹니다)
+    if (f && f !== "seq" && e.target.classList.contains("cell-input")) {
       it[f] = e.target.value;
       setDirty(true);
     }
@@ -384,6 +415,26 @@ function bindEvents() {
         e.target.checked = it.done;
         toast("상태를 바꾸지 못했습니다: " + (err.message || err), "error");
       }
+      return;
+    }
+
+    /* 등록 필요 체크박스 — 편집자 전용 (체크=필요, 해제=불필요)
+       불필요로 바꾸면 해당 가격 칸을 잠그기 위해 표를 다시 그립니다. */
+    if (e.target.classList.contains("chk-need")) {
+      if (State.view !== "editor") return;
+      it[e.target.dataset.field] = e.target.checked ? "필요" : "불필요";
+      setDirty(true);
+      UI.renderGrid();
+      return;
+    }
+
+    /* 소매몰↔네이버 가격 연동 토글 — 편집자 전용 */
+    if (e.target.classList.contains("chk-price-link")) {
+      if (State.view !== "editor") return;
+      it.link_np = e.target.checked;
+      if (e.target.checked) it.price_naver = it.price_retail;
+      setDirty(true);
+      UI.renderGrid();
       return;
     }
 
@@ -479,11 +530,14 @@ function bindColumnResize() {
     document.addEventListener("mouseup", onUp);
   });
 
-  /* 손잡이를 더블클릭하면 모든 열을 기본 너비로 */
+  /* 손잡이를 더블클릭하면 그 열을 가장 긴 내용에 맞춰 자동 조정 */
   head.addEventListener("dblclick", function (e) {
-    if (!e.target.closest(".col-resizer")) return;
-    UI.resetColWidths();
-    toast("열 너비를 기본값으로 되돌렸습니다");
+    var handle = e.target.closest(".col-resizer");
+    if (!handle) return;
+    var th = handle.closest("th[data-col]");
+    if (!th) return;
+    var key = UI.colKeyAt(Number(th.dataset.col));
+    if (key) UI.autoFitColumn(key);
   });
 }
 

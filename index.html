@@ -17,8 +17,8 @@
 
   <div class="gnb-center">
     <div class="view-switch" role="tablist" aria-label="화면 모드">
-      <button class="vs-btn is-active" data-view="editor" role="tab">편집자</button>
-      <button class="vs-btn" data-view="registrar" role="tab">등록자</button>
+      <button class="vs-btn is-active" data-view="editor" role="tab">편집</button>
+      <button class="vs-btn" data-view="registrar" role="tab">보기</button>
     </div>
   </div>
 
@@ -112,13 +112,13 @@
             <tr>
               <th class="sub c-name" data-col="3">자사몰<i class="col-resizer"></i></th>
               <th class="sub c-name" data-col="4">네이버<i class="col-resizer"></i></th>
-              <th class="sub c-need" data-col="8">소매몰<i class="col-resizer"></i></th>
-              <th class="sub c-need" data-col="9">도매몰<i class="col-resizer"></i></th>
-              <th class="sub c-need" data-col="10">네이버<i class="col-resizer"></i></th>
+              <th class="sub c-need" data-col="8"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_retail" title="소매몰 등록 필요 일괄 체크/해제"><span>소매몰</span></span><i class="col-resizer"></i></th>
+              <th class="sub c-need" data-col="9"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_wholesale" title="도매몰 등록 필요 일괄 체크/해제"><span>도매몰</span></span><i class="col-resizer"></i></th>
+              <th class="sub c-need" data-col="10"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_naver" title="네이버 등록 필요 일괄 체크/해제"><span>네이버</span></span><i class="col-resizer"></i></th>
               <th class="sub c-price" data-col="11">소매몰<i class="col-resizer"></i></th>
               <th class="sub c-price grade" data-col="12">도매몰<small>베이직</small><i class="col-resizer"></i></th>
               <th class="sub c-price grade" data-col="13">도매몰<small>마스터</small><i class="col-resizer"></i></th>
-              <th class="sub c-price" data-col="14">네이버<i class="col-resizer"></i></th>
+              <th class="sub c-price" data-col="14"><span class="th-chk"><input type="checkbox" class="chk-link-all only-editor" title="네이버 가격을 소매몰과 동일하게 일괄 설정/해제"><span>네이버</span></span><i class="col-resizer"></i></th>
             </tr>
           </thead>
           <tbody id="gridBody"></tbody>

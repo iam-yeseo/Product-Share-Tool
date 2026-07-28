@@ -244,6 +244,21 @@ body.resizing{cursor:col-resize;user-select:none}
 .mini-btn.danger:hover{background:#fdeeee}
 
 .chk-done,.chk-sel{width:16px;height:16px;cursor:pointer;accent-color:var(--brand);vertical-align:middle}
+
+/* 등록 필요 체크박스 */
+.c-need-chk{text-align:center}
+.chk-need{width:16px;height:16px;cursor:pointer;accent-color:var(--brand);vertical-align:middle}
+
+/* 소매몰↔네이버 가격 연동 */
+.price-link{display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;color:var(--text-mute);margin-bottom:2px;user-select:none}
+.price-link input{width:12px;height:12px;cursor:pointer;accent-color:var(--brand);margin:0}
+.price-link input:disabled{cursor:not-allowed}
+.price-wrap.is-linked .cell-price,.cell-price:disabled{color:var(--text-mute);background:var(--bg);cursor:not-allowed}
+.price-wrap.is-linked .won{color:var(--text-mute)}
+
+/* 머리글 일괄 체크박스 */
+.th-chk{display:inline-flex;align-items:center;gap:5px}
+.chk-need-all,.chk-link-all{width:13px;height:13px;cursor:pointer;accent-color:var(--brand);margin:0;flex:none}
 .done-mark{margin-left:3px;color:var(--ok);font-size:11px;font-weight:800;vertical-align:middle}
 .row.is-done .done-mark{color:var(--done-text)}
 

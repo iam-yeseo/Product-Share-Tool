@@ -118,10 +118,11 @@ var UI = (function () {
     return '<select class="cell-select" data-field="' + field + '">' + opts + "</select>";
   }
 
-  function priceInput(field, val) {
-    return '<span class="price-wrap">' +
+  function priceInput(field, val, disabled) {
+    return '<span class="price-wrap' + (disabled ? " is-linked" : "") + '">' +
       '<span class="won">₩</span>' +
       '<input class="cell-input cell-price" data-field="' + field + '" inputmode="numeric" ' +
+      (disabled ? "disabled " : "") +
       'value="' + esc(withComma(val)) + '">' +
       "</span>";
   }
@@ -192,24 +193,54 @@ var UI = (function () {
     c.push('<td class="c-imguse">' +
       (editor ? textInput("image_usage", it.image_usage) : ro(it.image_usage, true)) + "</td>");
 
-    // 등록 필요 3종
+    // 등록 필요 3종 — 편집: 체크박스(체크=필요), 보기: 태그
     ["need_retail", "need_wholesale", "need_naver"].forEach(function (f) {
       var v = it[f];
-      c.push('<td class="c-need">' +
-        (editor ? selectInput(f, v, NEED_OPTIONS)
-                : roTag(v, v === "필요" ? "need" : v === "불필요" ? "noneed" : "content")) + "</td>");
+      if (editor) {
+        c.push('<td class="c-need c-need-chk">' +
+          '<input type="checkbox" class="chk-need" data-field="' + f + '"' +
+          (v === "필요" ? " checked" : "") + ' title="체크하면 등록 필요"></td>');
+      } else {
+        c.push('<td class="c-need">' +
+          roTag(v, v === "필요" ? "need" : v === "불필요" ? "noneed" : "content") + "</td>");
+      }
     });
+
+    // 소매몰↔네이버 가격 연동 여부 (편집자 세션 한정, 기본 연동)
+    if (it.link_np === undefined) it.link_np = (it.price_naver === it.price_retail);
+    var linked = editor && it.link_np !== false;
+
+    // 등록 필요가 체크되지 않은(불필요) 가격은 입력할 수 없습니다.
+    function needOn(f) {
+      if (f === "price_retail") return it.need_retail === "필요";
+      if (f === "price_wholesale" || f === "price_wholesale_master") return it.need_wholesale === "필요";
+      if (f === "price_naver") return it.need_naver === "필요";
+      return true;
+    }
 
     // 가격 4종 (도매몰은 베이직·마스터 등급으로 분리)
     ["price_retail", "price_wholesale", "price_wholesale_master", "price_naver"].forEach(function (f) {
-      c.push('<td class="c-price">' +
-        (editor ? priceInput(f, it[f])
-                : (it[f] === null || it[f] === undefined
-                    ? '<span class="ro-empty">—</span>'
-                    : '<span class="ro-cell"><span class="ro-text price-ro">' + esc(fmtWon(it[f])) + "</span>" +
-                      '<button class="copy-btn" data-copy="' + esc(String(it[f])) +
-                      '" title="숫자만 복사">복사</button></span>')
-        ) + "</td>");
+      if (editor) {
+        var needBlocked = !needOn(f);
+        if (f === "price_naver") {
+          c.push('<td class="c-price">' +
+            '<label class="price-link" title="소매몰 가격과 같게 유지합니다">' +
+              '<input type="checkbox" class="chk-price-link"' + (linked ? " checked" : "") +
+                (needBlocked ? " disabled" : "") + ">" +
+              "<span>소매몰과 동일</span>" +
+            "</label>" +
+            priceInput(f, it[f], needBlocked || linked) + "</td>");
+        } else {
+          c.push('<td class="c-price">' + priceInput(f, it[f], needBlocked) + "</td>");
+        }
+      } else {
+        c.push('<td class="c-price">' +
+          (it[f] === null || it[f] === undefined
+            ? '<span class="ro-empty">—</span>'
+            : '<span class="ro-cell"><span class="ro-text price-ro">' + esc(fmtWon(it[f])) + "</span>" +
+              '<button class="copy-btn" data-copy="' + esc(String(it[f])) +
+              '" title="숫자만 복사">복사</button></span>') + "</td>");
+      }
     });
 
     // 이미지 — 현재 비활성
@@ -251,6 +282,22 @@ var UI = (function () {
     }
   }
 
+  /* 머리글의 일괄 체크박스 상태(전체/부분/없음)를 행 상태에 맞춰 갱신 */
+  function renderHeaderChecks() {
+    var total = State.items.length;
+    function set(sel, isOn) {
+      var el = document.querySelector(sel);
+      if (!el) return;
+      var n = State.items.filter(isOn).length;
+      el.checked = total > 0 && n === total;
+      el.indeterminate = n > 0 && n < total;
+    }
+    set('.chk-need-all[data-field="need_retail"]', function (it) { return it.need_retail === "필요"; });
+    set('.chk-need-all[data-field="need_wholesale"]', function (it) { return it.need_wholesale === "필요"; });
+    set('.chk-need-all[data-field="need_naver"]', function (it) { return it.need_naver === "필요"; });
+    set(".chk-link-all", function (it) { return it.link_np !== false; });
+  }
+
   function renderGrid() {
     var body = document.getElementById("gridBody");
     if (!State.items.length) {
@@ -260,10 +307,65 @@ var UI = (function () {
           ? "아래 <b>+ 행 추가</b> 버튼으로 상품을 추가하세요."
           : "등록된 상품이 없습니다.") + "</td></tr>";
       renderToolbar();
+      renderHeaderChecks();
       return;
     }
     body.innerHTML = State.items.map(renderRow).join("");
     renderToolbar();
+    renderHeaderChecks();
+  }
+
+  /* ---------- 열 자동 맞춤 (손잡이 더블클릭) ---------- */
+  function cellTextForKey(it, key) {
+    switch (key) {
+      case "seq": return String(it.seq || "");
+      case "brand": return it.brand || "";
+      case "name_own": return it.name_own || "";
+      case "name_naver": return it.name_naver || "";
+      case "model": return it.model || "";
+      case "content": return it.content || "";
+      case "image_usage": return it.image_usage || "";
+      case "ref_link": return it.ref_link || "";
+      case "note": return it.note || "";
+      case "price_retail":
+      case "price_wholesale":
+      case "price_wholesale_master":
+      case "price_naver":
+        return (it[key] === null || it[key] === undefined) ? "" : "₩ " + withComma(it[key]);
+      default: return "";
+    }
+  }
+  var EXTRA_PAD = { seq: 52, content: 46, price_retail: 34, price_wholesale: 34, price_wholesale_master: 34, price_naver: 34 };
+
+  function autoFitColumn(key) {
+    var cols = document.querySelectorAll("#gridCols col");
+    var index = -1;
+    cols.forEach(function (col, i) { if (col.dataset.key === key) index = i; });
+    if (index < 0) return;
+
+    var ctx = autoFitColumn._ctx ||
+      (autoFitColumn._ctx = document.createElement("canvas").getContext("2d"));
+    function fontOf(el, fallback) {
+      if (!el) return fallback;
+      var cs = getComputedStyle(el);
+      return (cs.fontWeight || "400") + " " + cs.fontSize + " " + cs.fontFamily;
+    }
+    var bodyFont = fontOf(document.querySelector("#grid tbody td"), "13px sans-serif");
+    var th = document.querySelector('#grid thead th[data-col="' + index + '"]');
+    var headFont = fontOf(th, "700 11.5px sans-serif");
+
+    var max = 0;
+    if (th) { ctx.font = headFont; max = ctx.measureText((th.textContent || "").trim()).width; }
+    ctx.font = bodyFont;
+    State.items.forEach(function (it) {
+      var t = cellTextForKey(it, key);
+      if (t) max = Math.max(max, ctx.measureText(t).width);
+    });
+
+    var pad = EXTRA_PAD[key] || 30;
+    var w = Math.min(600, Math.round(max) + pad);
+    setColWidth(key, w);
+    saveColWidths();
   }
 
   function renderAll() {
@@ -290,6 +392,8 @@ var UI = (function () {
     renderGrid: renderGrid,
     renderHead: renderHead,
     renderToolbar: renderToolbar,
+    renderHeaderChecks: renderHeaderChecks,
+    autoFitColumn: autoFitColumn,
     setSync: setSync,
     applyColWidths: applyColWidths,
     setColWidth: setColWidth,
