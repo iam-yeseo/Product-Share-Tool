@@ -80,7 +80,8 @@ var Api = (function () {
         .update({
           title: list.title || "제목 없는 리스트",
           author: list.author || "",
-          work_date: list.work_date || null
+          work_date: list.work_date || null,
+          updated_at: new Date().toISOString()   // 최종 편집 일시
         })
         .eq("id", list.id)
     );
@@ -129,6 +130,27 @@ var Api = (function () {
     );
   }
 
+  /* 열 숨김 설정 (전역 공유) — app_settings 테이블에 배열로 저장 */
+  async function fetchHiddenCols() {
+    var data = check(
+      await supabaseClient
+        .from("app_settings")
+        .select("value")
+        .eq("key", "hidden_columns")
+        .maybeSingle()
+    );
+    var v = data && data.value;
+    return Array.isArray(v) ? v : [];
+  }
+
+  async function saveHiddenCols(cols) {
+    check(
+      await supabaseClient
+        .from("app_settings")
+        .upsert({ key: "hidden_columns", value: cols, updated_at: new Date().toISOString() })
+    );
+  }
+
   return {
     fetchLists: fetchLists,
     fetchList: fetchList,
@@ -136,6 +158,8 @@ var Api = (function () {
     createList: createList,
     deleteList: deleteList,
     saveDraft: saveDraft,
-    setDone: setDone
+    setDone: setDone,
+    fetchHiddenCols: fetchHiddenCols,
+    saveHiddenCols: saveHiddenCols
   };
 })();

@@ -13,8 +13,29 @@ var State = {
   baseItemIds: {},       // id -> true (신규/기존 행 판별용)
   selected: {},          // 편집자 뷰에서 체크한 행 (id -> true) — 등록 완료 상태와 무관
   dirty: false,
-  remoteChanged: false   // 편집 중 다른 사람이 서버 데이터를 바꿨는지
+  remoteChanged: false,  // 편집 중 다른 사람이 서버 데이터를 바꿨는지
+  hiddenCols: []         // 보기 뷰에서 숨길 열 key 목록 (전역 공유)
 };
+
+/* 숨기거나 다시 표시할 수 있는 열 (체크·순번·관리 열은 제외) */
+var HIDEABLE_COLS = [
+  { key: "brand", label: "브랜드" },
+  { key: "name_own", label: "상품명 · 자사몰" },
+  { key: "name_naver", label: "상품명 · 네이버" },
+  { key: "model", label: "모델명" },
+  { key: "content", label: "내용" },
+  { key: "image_usage", label: "이미지 사용 여부" },
+  { key: "need_retail", label: "등록 필요 · 소매몰" },
+  { key: "need_wholesale", label: "등록 필요 · 도매몰" },
+  { key: "need_naver", label: "등록 필요 · 네이버" },
+  { key: "price_retail", label: "가격 · 소매몰" },
+  { key: "price_wholesale", label: "가격 · 도매몰(베이직)" },
+  { key: "price_wholesale_master", label: "가격 · 도매몰(마스터)" },
+  { key: "price_naver", label: "가격 · 네이버" },
+  { key: "image", label: "이미지" },
+  { key: "ref_link", label: "참고 링크" },
+  { key: "note", label: "비고" }
+];
 
 /* 체크된 행 개수 / 목록 */
 function selectedCount() {

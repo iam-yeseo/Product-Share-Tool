@@ -541,6 +541,58 @@ function bindColumnResize() {
   });
 }
 
+/* ---------- 열 표시 설정 (전역 공유) ---------- */
+var _colSaveTimer = null;
+var _ignoreColEcho = false;   // 내가 저장한 변경의 실시간 반향은 잠시 무시
+
+// 빠른 연속 토글을 한 번의 저장으로 모읍니다. (마지막 상태가 서버에 반영됨)
+function scheduleColSave() {
+  clearTimeout(_colSaveTimer);
+  _ignoreColEcho = true;
+  _colSaveTimer = setTimeout(async function () {
+    try {
+      await Api.saveHiddenCols((State.hiddenCols || []).slice());
+    } catch (err) {
+      console.error(err);
+      toast("열 설정 저장 실패: " + (err.message || err), "error");
+    }
+    setTimeout(function () { _ignoreColEcho = false; }, 1200);
+  }, 400);
+}
+
+function bindColSettings() {
+  var btn = document.getElementById("btnColSettings");
+  var panel = document.getElementById("colSettingsPanel");
+  if (!btn || !panel) return;
+
+  btn.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (panel.hidden) { UI.renderColPanel(); panel.hidden = false; }
+    else panel.hidden = true;
+  });
+
+  // 패널 안 클릭은 닫히지 않도록
+  panel.addEventListener("click", function (e) { e.stopPropagation(); });
+
+  // 체크 = 표시, 해제 = 숨김 → 잠시 뒤 서버에 저장(전역 공유)
+  panel.addEventListener("change", function (e) {
+    if (!e.target.classList.contains("col-vis")) return;
+    var key = e.target.dataset.key;
+    var hidden = (State.hiddenCols || []).slice();
+    var idx = hidden.indexOf(key);
+    if (e.target.checked) { if (idx > -1) hidden.splice(idx, 1); }
+    else if (idx === -1) { hidden.push(key); }
+
+    State.hiddenCols = hidden;
+    UI.updateHideStyle();
+    UI.applyColWidths();
+    scheduleColSave();
+  });
+
+  // 바깥을 클릭하면 패널을 닫습니다.
+  document.addEventListener("click", function () { panel.hidden = true; });
+}
+
 /* ---------- 엑셀 불러오기 ---------- */
 var pendingImport = null;
 
@@ -641,10 +693,24 @@ function startRealtime() {
     .channel("product-tool")
     .on("postgres_changes", { event: "*", schema: "public", table: "product_items" }, onRemote)
     .on("postgres_changes", { event: "*", schema: "public", table: "product_lists" }, onRemote)
+    .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, onSettings)
     .subscribe(function (status) {
       if (status === "SUBSCRIBED") UI.setSync("실시간 동기화 중", "ok");
       else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") UI.setSync("동기화 끊김", "error");
     });
+}
+
+/* 열 숨김 설정이 바뀌면(다른 사람이 변경) 다시 불러와 적용합니다. */
+async function onSettings() {
+  if (_ignoreColEcho) return;   // 내가 방금 저장한 변경이면 무시
+  try {
+    State.hiddenCols = await Api.fetchHiddenCols();
+    UI.updateHideStyle();
+    UI.applyColWidths();
+    UI.renderColPanel();
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 function onRemote() {
@@ -671,6 +737,9 @@ function onRemote() {
   bindColumnResize();
   bindImport();
   bindLeaveModal();
+  bindColSettings();
+  try { State.hiddenCols = await Api.fetchHiddenCols(); } catch (e) { State.hiddenCols = []; }
+  UI.updateHideStyle();
   UI.applyColWidths();
   UI.setSync("연결 중…");
   await refreshSidebar();

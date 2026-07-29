@@ -31,10 +31,13 @@ var UI = (function () {
   function applyColWidths() {
     var cols = document.querySelectorAll("#gridCols col");
     var total = 0;
+    var hidden = State.hiddenCols || [];
     cols.forEach(function (col) {
       var k = col.dataset.key;
       var w = colWidthOf(k);
       if (k === "act" && State.view !== "editor") w = 0;   // 등록자 뷰에서는 관리 열이 없습니다
+      // 보기 뷰에서는 숨긴 열을 접습니다. (편집 뷰에서는 항상 보이며 편집 가능)
+      if (State.view === "registrar" && hidden.indexOf(k) > -1) w = 0;
       col.style.width = w + "px";
       total += w;
     });
@@ -103,6 +106,11 @@ var UI = (function () {
 
     var done = State.items.filter(function (i) { return i.done; }).length;
     document.getElementById("listProgress").textContent = done + " / " + State.items.length;
+
+    var created = document.getElementById("listCreated");
+    var updated = document.getElementById("listUpdated");
+    if (created) created.textContent = l.created_at ? fmtDateTime(l.created_at) : "—";
+    if (updated) updated.textContent = l.updated_at ? fmtDateTime(l.updated_at) : "—";
   }
 
   /* ---------- 셀 헬퍼 ---------- */
@@ -180,28 +188,28 @@ var UI = (function () {
     }
 
     // 브랜드 / 상품명(자사몰) / 상품명(네이버) / 모델명
-    c.push('<td class="c-brand">' + (editor ? textInput("brand", it.brand) : ro(it.brand, true)) + "</td>");
-    c.push('<td class="c-name">' + (editor ? textInput("name_own", it.name_own) : ro(it.name_own, true)) + "</td>");
-    c.push('<td class="c-name">' + (editor ? textInput("name_naver", it.name_naver) : ro(it.name_naver, true)) + "</td>");
-    c.push('<td class="c-model">' + (editor ? textInput("model", it.model) : ro(it.model, true)) + "</td>");
+    c.push('<td class="c-brand k-brand">' + (editor ? textInput("brand", it.brand) : ro(it.brand, true)) + "</td>");
+    c.push('<td class="c-name k-name_own">' + (editor ? textInput("name_own", it.name_own) : ro(it.name_own, true)) + "</td>");
+    c.push('<td class="c-name k-name_naver">' + (editor ? textInput("name_naver", it.name_naver) : ro(it.name_naver, true)) + "</td>");
+    c.push('<td class="c-model k-model">' + (editor ? textInput("model", it.model) : ro(it.model, true)) + "</td>");
 
     // 내용
-    c.push('<td class="c-content">' +
+    c.push('<td class="c-content k-content">' +
       (editor ? selectInput("content", it.content, CONTENT_OPTIONS) : roTag(it.content, "content")) + "</td>");
 
     // 이미지 사용 여부
-    c.push('<td class="c-imguse">' +
+    c.push('<td class="c-imguse k-image_usage">' +
       (editor ? textInput("image_usage", it.image_usage) : ro(it.image_usage, true)) + "</td>");
 
     // 등록 필요 3종 — 편집: 체크박스(체크=필요), 보기: 태그
     ["need_retail", "need_wholesale", "need_naver"].forEach(function (f) {
       var v = it[f];
       if (editor) {
-        c.push('<td class="c-need c-need-chk">' +
+        c.push('<td class="c-need c-need-chk k-' + f + '">' +
           '<input type="checkbox" class="chk-need" data-field="' + f + '"' +
           (v === "필요" ? " checked" : "") + ' title="체크하면 등록 필요"></td>');
       } else {
-        c.push('<td class="c-need">' +
+        c.push('<td class="c-need k-' + f + '">' +
           roTag(v, v === "필요" ? "need" : v === "불필요" ? "noneed" : "content") + "</td>");
       }
     });
@@ -223,7 +231,7 @@ var UI = (function () {
       if (editor) {
         var needBlocked = !needOn(f);
         if (f === "price_naver") {
-          c.push('<td class="c-price">' +
+          c.push('<td class="c-price k-' + f + '">' +
             '<label class="price-link" title="소매몰 가격과 같게 유지합니다">' +
               '<input type="checkbox" class="chk-price-link"' + (linked ? " checked" : "") +
                 (needBlocked ? " disabled" : "") + ">" +
@@ -231,10 +239,10 @@ var UI = (function () {
             "</label>" +
             priceInput(f, it[f], needBlocked || linked) + "</td>");
         } else {
-          c.push('<td class="c-price">' + priceInput(f, it[f], needBlocked) + "</td>");
+          c.push('<td class="c-price k-' + f + '">' + priceInput(f, it[f], needBlocked) + "</td>");
         }
       } else {
-        c.push('<td class="c-price">' +
+        c.push('<td class="c-price k-' + f + '">' +
           (it[f] === null || it[f] === undefined
             ? '<span class="ro-empty">—</span>'
             : '<span class="ro-cell"><span class="ro-text price-ro">' + esc(fmtWon(it[f])) + "</span>" +
@@ -244,20 +252,20 @@ var UI = (function () {
     });
 
     // 이미지 — 현재 비활성
-    c.push('<td class="c-image"><button class="btn-locked" disabled title="이미지 업로드는 추후 지원 예정입니다">준비 중</button></td>');
+    c.push('<td class="c-image k-image"><button class="btn-locked" disabled title="이미지 업로드는 추후 지원 예정입니다">준비 중</button></td>');
 
     // 참고 링크
     if (editor) {
-      c.push('<td class="c-link">' + textInput("ref_link", it.ref_link, "https://") + "</td>");
+      c.push('<td class="c-link k-ref_link">' + textInput("ref_link", it.ref_link, "https://") + "</td>");
     } else {
       var url = normalizeUrl(it.ref_link);
-      c.push('<td class="c-link">' + (url
+      c.push('<td class="c-link k-ref_link">' + (url
         ? '<button class="btn-go" data-url="' + esc(url) + '">바로가기</button>'
         : ro(it.ref_link, true)) + "</td>");   // 웹 주소가 아니면(사내 경로 등) 텍스트 + 복사
     }
 
     // 비고
-    c.push('<td class="c-note">' + (editor ? textInput("note", it.note) : ro(it.note, true)) + "</td>");
+    c.push('<td class="c-note k-note">' + (editor ? textInput("note", it.note) : ro(it.note, true)) + "</td>");
 
     // 관리 (편집자 전용)
     c.push('<td class="c-act only-editor-cell">' +
@@ -368,6 +376,39 @@ var UI = (function () {
     saveColWidths();
   }
 
+  /* ---------- 열 숨김 (보기 뷰에서 숨긴 열의 셀을 완전히 접습니다) ---------- */
+  function updateHideStyle() {
+    var el = document.getElementById("colHideStyle");
+    if (!el) {
+      el = document.createElement("style");
+      el.id = "colHideStyle";
+      document.head.appendChild(el);
+    }
+    var css = (State.hiddenCols || []).map(function (k) {
+      var sel = "body.view-registrar .k-" + k;
+      return sel + "{padding-left:0;padding-right:0;border-right-width:0;max-width:0;overflow:hidden}" +
+             sel + " *{display:none}";
+    }).join("");
+    el.textContent = css;
+  }
+
+  /* 편집 뷰의 '열 표시' 설정 패널 — 체크 해제한 열은 보기 뷰에서 숨겨집니다. */
+  function renderColPanel() {
+    var panel = document.getElementById("colSettingsPanel");
+    if (!panel) return;
+    var hidden = State.hiddenCols || [];
+    panel.innerHTML =
+      '<div class="col-panel-head">보기 뷰에 표시할 열</div>' +
+      '<div class="col-panel-list">' +
+      HIDEABLE_COLS.map(function (c) {
+        var checked = hidden.indexOf(c.key) === -1 ? " checked" : "";
+        return '<label class="col-panel-item"><input type="checkbox" class="col-vis" data-key="' +
+          esc(c.key) + '"' + checked + "><span>" + esc(c.label) + "</span></label>";
+      }).join("") +
+      "</div>" +
+      '<div class="col-panel-foot">체크 해제한 열은 <b>보기</b> 뷰에서 숨겨집니다. (전체 사용자 공유)</div>';
+  }
+
   function renderAll() {
     renderSidebar();
     var has = !!State.currentListId;
@@ -394,6 +435,8 @@ var UI = (function () {
     renderToolbar: renderToolbar,
     renderHeaderChecks: renderHeaderChecks,
     autoFitColumn: autoFitColumn,
+    updateHideStyle: updateHideStyle,
+    renderColPanel: renderColPanel,
     setSync: setSync,
     applyColWidths: applyColWidths,
     setColWidth: setColWidth,

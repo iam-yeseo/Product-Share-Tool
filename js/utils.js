@@ -29,6 +29,16 @@ function fmtDate(iso) {
   return d.getFullYear() + ". " + m + ". " + day + ".";
 }
 
+/* 날짜+시간 표시용: 2026. 07. 24. 14:30:05 */
+function fmtDateTime(iso) {
+  if (!iso) return "";
+  var d = new Date(iso);
+  if (isNaN(d)) return String(iso);
+  var p = function (n) { return String(n).padStart(2, "0"); };
+  return d.getFullYear() + ". " + p(d.getMonth() + 1) + ". " + p(d.getDate()) + ". " +
+    p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+}
+
 /* 숫자만 남기기 */
 function onlyDigits(s) {
   return String(s == null ? "" : s).replace(/[^0-9]/g, "");
