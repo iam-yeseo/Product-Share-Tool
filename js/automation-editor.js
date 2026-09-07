@@ -19,7 +19,7 @@ var AutomationEditor = (function () {
       var label = AutomationCore.path(getSettings().categories[store], code);
       return '<span><span class="category-path" title="' + esc(label) + '">' + (store === 'retail' ? '소매 ' : '도매 ') + esc(label || '카테고리 미선택') + '</span><code data-field="category-' + store + '">' + esc(code || '미선택') + '</code></span>';
     }).join('');
-    return '<button class="automation-summary" data-auto-open="' + esc(it.id) + '">' + lines + '<span>상세 이미지 ' + a.detailImages.length + '장 · 열기</span></button>';
+    return '<button class="automation-summary" data-auto-open="' + esc(it.id) + '">' + lines + (a.origin ? '<span>원산지 ' + esc(a.origin) + '</span>' : '') + '<span>상세 이미지 ' + a.detailImages.length + '장 · 열기</span></button>';
   }
   function getSettings() { return settings || { categories: { retail: [], wholesale: [] }, folders: [] }; }
   function publish() {
@@ -62,6 +62,7 @@ var AutomationEditor = (function () {
     var url = thumbUrl(it);
     document.getElementById('autoBody').innerHTML =
       '<section class="auto-section"><h3>카테고리</h3><div class="field-grid">' + cats + '</div></section>' +
+      '<section class="auto-section"><h3>기본 정보</h3><div class="field-grid"><label class="field">원산지<input data-basic="origin" value="' + esc(a.origin) + '" placeholder="예: Made in China" maxlength="30"' + (ro ? ' readonly' : '') + '><span class="field-note">고도몰 원산지 칸에 그대로 입력됩니다. 제조사는 브랜드와 동일하게 처리됩니다.</span></label></div></section>' +
       '<section class="auto-section"><h3>상품 썸네일</h3><div class="thumbnail-editor">' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="등록할 썸네일"></a>' : '<div class="thumbnail-empty">썸네일 없음</div>') +
       '<div>' + (!ro ? '<label class="btn file-label">이미지 선택<input id="thumbnailFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label> <button class="btn btn-ghost" data-action="remove-thumb">제거</button><p class="field-note">JPG · PNG · WEBP · GIF, 최대 6MB<br>편집 완료 · 저장 시 업로드됩니다.</p>' : '') +
       '<p class="field-note">' + esc(pending.has(it.id) ? pending.get(it.id).file.name + ' · 저장 대기' : (a.thumbnail && a.thumbnail.originalName) || '') + '</p>' + (it.image_url && !pending.has(it.id) ? '<button class="btn btn-ghost" data-action="copy-thumb">썸네일 주소 복사</button>' : '') + '</div></div></section>' +
@@ -173,6 +174,7 @@ var AutomationEditor = (function () {
       var it=current();if(!it || State.view!=='editor')return;
       if(e.target.dataset.categorySearch){var store=e.target.dataset.categorySearch;document.getElementById('category-'+store).innerHTML=categoryOptions(store,it.automation.categoryCodes[store],e.target.value);return;}
       if(e.target.dataset.generator){it.automation.generator[e.target.dataset.generator]=e.target.value;touch();}
+      if(e.target.dataset.basic){it.automation[e.target.dataset.basic]=e.target.value;touch();}
       if(e.target.dataset.imageField){var row=e.target.closest('[data-image-id]'),img=it.automation.detailImages.find(function(i){return i.id===row.dataset.imageId;});img[e.target.dataset.imageField]=e.target.value.toLowerCase().trim();delete img.validation;touch();updateOutputs();}
     });
     dialog.addEventListener('change',async function(e){

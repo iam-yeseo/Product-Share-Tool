@@ -47,6 +47,7 @@ for (const item of payload.items) {
       "price_wholesale_master": null,
       "price_naver": 466000,
       "categoryCodes": { "retail": "003001", "wholesale": "003001" },
+      "origin": "Made in China",
       "categoryPaths": {
         "retail": "영상장비-틸타리그시스템 > Camera Cage",
         "wholesale": "영상장비-틸타리그시스템 > Camera Cage"
@@ -98,4 +99,19 @@ for (const item of payload.items) {
 
 ## 저장 위치
 
-DB 직접 연동 시 `product_items.automation.categoryCodes`, `.detailImages`, `.detailHtml`, `.thumbnail`을 사용합니다. 썸네일 공개 URL은 기존 `image_url`에도 저장합니다. 원본 JSON의 이미지에는 내부 ID가 있고 DOM 내보내기에는 `order`가 있습니다. 상세 HTML을 직접 재생성한다면 `js/automation-core.js`의 주소 검증과 생성 규칙을 함께 사용하세요. 이 변경은 실제 고도몰에 상품을 자동 등록하는 프로그램 자체를 포함하지 않습니다.
+DB 직접 연동 시 `product_items.automation.categoryCodes`, `.origin`, `.detailImages`, `.detailHtml`, `.thumbnail`을 사용합니다. `thumbnail`에는 Storage `path`만 있고 공개 URL은 `image_url` 컬럼에 있습니다. 썸네일 공개 URL은 기존 `image_url`에도 저장합니다. 원본 JSON의 이미지에는 내부 ID가 있고 DOM 내보내기에는 `order`가 있습니다. 상세 HTML을 직접 재생성한다면 `js/automation-core.js`의 주소 검증과 생성 규칙을 함께 사용하세요. 이 변경은 실제 고도몰에 상품을 자동 등록하는 프로그램 자체를 포함하지 않습니다.
+
+## 등록 상태 기록
+
+실제 등록 프로그램은 DB를 직접 읽고 `product_registrations`에 결과를 씁니다.
+
+| 컬럼 | 값 |
+|---|---|
+| `item_id` / `channel` | 상품 UUID / `retail` 또는 `wholesale` (조합 유일) |
+| `status` | `pending` → `running` → `success` 또는 `failed` |
+| `goods_no` | 고도몰이 발급한 상품번호 (확인된 경우) |
+| `error_message` | 실패 사유 |
+| `warnings` | 브랜드 미매칭, 썸네일 없음 등 경고 문자열 배열 |
+| `attempted_at` | 마지막 시도 시각 |
+
+대상 선정: `need_*`가 "필요"이고 `done=false`이며 해당 채널이 `success`가 아닌 상품. 필요한 채널이 모두 `success`면 프로그램이 `done=true`, `done_at`을 기록합니다. 원산지는 `automation.origin`을 사용합니다.

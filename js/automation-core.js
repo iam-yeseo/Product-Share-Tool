@@ -9,6 +9,7 @@ var AutomationCore = (function () {
     a.categoryCodes = Object.assign({ retail: '', wholesale: '' }, a.categoryCodes);
     a.detailImages = Array.isArray(a.detailImages) ? a.detailImages : [];
     a.generator = Object.assign({ brand: '', product: '', folder: '', extension: 'jpg', count: 1 }, a.generator);
+    a.origin = typeof a.origin === 'string' ? a.origin.trim() : '';
     a.schemaVersion = 1;
     return a;
   }
@@ -78,7 +79,7 @@ var AutomationCore = (function () {
   }
   function exportItem(item, settings) {
     var a = normalize(item.automation);
-    return Object.assign({}, item, { automation: undefined, categoryCodes: a.categoryCodes,
+    return Object.assign({}, item, { automation: undefined, categoryCodes: a.categoryCodes, origin: a.origin,
       categoryPaths: { retail: path(settings.categories.retail, a.categoryCodes.retail), wholesale: path(settings.categories.wholesale, a.categoryCodes.wholesale) },
       thumbnail: Object.assign({}, a.thumbnail, { url: item.image_url || '' }),
       detailImages: a.detailImages.map(function (img, i) { return { order: i + 1, folder: img.folder, filename: img.filename, url: imageUrl(img), validation: validation(img) }; }),
