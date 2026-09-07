@@ -75,6 +75,7 @@ function makeItem(seq) {
     price_wholesale_master: null,   // 도매몰 · 마스터
     price_naver: null,
     image_url: "",
+    automation: AutomationCore.normalize({}),
     ref_link: "",
     note: "",
     done: false,
@@ -92,6 +93,9 @@ var COPY_FIELDS = [
 function copyItem(src) {
   var it = makeItem(0);
   COPY_FIELDS.forEach(function (f) { it[f] = src[f]; });
+  it.automation = AutomationCore.normalize(src.automation);
+  it.automation.detailImages.forEach(function (img) { img.id = uuid(); });
+  if (typeof AutomationEditor !== 'undefined') AutomationEditor.copyPending(src.id, it.id);
   return it;
 }
 
@@ -106,6 +110,7 @@ function setDirty(v) {
   var btn = document.getElementById("btnSave");
   if (badge) badge.hidden = !v;
   if (btn) btn.disabled = !v;
+  if (typeof AutomationEditor !== "undefined") AutomationEditor.publish();
 }
 
 /* 아직 저장되지 않은 작업이 있는지 — 저장 전 행 추가 포함

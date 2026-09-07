@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>설정 · 상품 등록 요청 툴</title><link rel="stylesheet" href="../css/style.css"><link rel="stylesheet" href="../css/automation.css"></head>
+<body class="settings-page">
+<header class="gnb"><div class="gnb-left"><span class="logo">상품 등록 요청</span></div><div class="gnb-center"><nav class="view-switch" aria-label="페이지"><a class="vs-btn" data-route="edit" href="../edit/">편집</a><a class="vs-btn" data-route="view" href="../view/">보기</a><a class="vs-btn is-active" aria-current="page" href="../settings/">설정</a></nav></div><div class="gnb-right"><span id="settingsState" class="sync-state">불러오는 중…</span><button id="saveSettings" class="btn btn-primary" disabled>설정 저장</button></div></header>
+<main class="settings-main" inert>
+<section class="settings-intro"><h1>상품 등록 설정</h1><p>몰별 카테고리와 상세 이미지 폴더를 관리합니다. 저장한 설정은 모든 사용자에게 공유됩니다.</p></section>
+<div id="settingsError" class="settings-error" hidden></div>
+<div class="settings-tabs" role="group" aria-label="설정 항목"><button class="btn is-active" data-settings-tab="retail">소매몰 카테고리</button><button class="btn" data-settings-tab="wholesale">도매몰 카테고리</button><button class="btn" data-settings-tab="folders">이미지 폴더</button></div>
+<section id="categorySettings" class="settings-card">
+<div class="section-title"><div><h2 id="categoryHeading">소매몰 카테고리</h2><p id="categoryCount" class="field-note"></p></div><input id="categorySearch" type="search" placeholder="이름 또는 코드 검색" aria-label="카테고리 검색"></div>
+<div class="settings-columns"><div id="categoryTree" class="category-tree" aria-label="카테고리 목록"></div><form id="categoryForm" class="category-form">
+<h3 id="categoryFormTitle">카테고리 추가</h3>
+<label class="field">상위 카테고리<select id="categoryParent"></select></label>
+<label class="field">카테고리 이름<input id="categoryName" required maxlength="100" placeholder="오디오 믹서"></label>
+<label class="field">카테고리 코드<input id="categoryCode" required inputmode="numeric" pattern="(?:[0-9]{3}){1,4}" placeholder="020001" maxlength="12"><span class="field-note">1~4차는 3·6·9·12자리 코드입니다. 앞자리 0도 그대로 저장됩니다.</span></label>
+<label class="field">기본 이미지 폴더<select id="categoryFolder"></select><span class="field-note">미지정 시 상위 카테고리의 연결을 따릅니다.</span></label>
+<label><input id="categoryActive" type="checkbox" checked> 새 상품에서 선택 가능</label>
+<div class="action-row"><button class="btn btn-primary" type="submit">변경 반영</button><button class="btn" id="newCategory" type="button">새 카테고리</button></div><p class="field-note">기존 코드는 보존합니다. 코드 변경이 필요하면 새로 추가하고 기존 항목의 선택을 중지하세요.</p>
+</form></div></section>
+<section id="folderSettings" class="settings-card" hidden><h2>상세 이미지 폴더</h2><p class="field-note">기본 주소: https://calla.hgodo.com/product/<br>폴더를 수정해도 이미 저장한 상품 주소는 유지됩니다.</p><div id="folderList" class="folder-list"></div><form id="folderForm" class="action-row"><input id="newFolderName" placeholder="새 폴더 이름" aria-label="새 폴더 이름" required pattern="[a-z0-9][a-z0-9_-]*"><button class="btn btn-primary">폴더 추가</button></form></section>
+<p class="field-note">변경 반영 후 상단의 <b>설정 저장</b>을 눌러야 다른 사용자에게 적용됩니다.</p>
+</main><div id="toast" class="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0"></script><script src="../js/supabaseClient.js"></script><script src="../js/utils.js"></script><script src="../js/automation-core.js"></script><script src="../js/api.js"></script><script src="../js/settings.js"></script></body></html>

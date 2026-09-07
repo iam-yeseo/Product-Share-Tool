@@ -1,6 +1,7 @@
 /* ===== 이벤트 연결 · 초기화 · 실시간 동기화 ===== */
 
 var removedIds = [];   // 편집 중 삭제된 행 (저장 시 서버에서 삭제)
+var listLoadRevision = 0;
 
 /* ---------- 데이터 로드 ---------- */
 async function refreshSidebar() {
@@ -14,17 +15,25 @@ async function refreshSidebar() {
 }
 
 async function loadList(id) {
+  var revision = ++listLoadRevision;
+  State.loading = true; State.loadError = false; AutomationEditor.publish();
   try {
-    var list = await Api.fetchList(id);
+    var result = await Promise.all([Api.fetchList(id), Api.fetchItems(id)]);
+    if (revision !== listLoadRevision) return;
+    var list = result[0];
     if (!list) {
       toast("리스트를 찾을 수 없습니다", "error");
-      State.currentListId = null;
+      State.currentListId = null; State.list = null; State.items = []; State.loadError = true;
       UI.renderAll();
       return;
     }
+    AutomationEditor.clearPending();
     State.currentListId = id;
+    var address = new URL(location.href); address.searchParams.set('list', id); history.replaceState(null,'',address);
+    updatePageLinks();
     State.list = list;
-    State.items = await Api.fetchItems(id);
+    State.items = result[1];
+    State.items.forEach(function (it) { it.automation = AutomationCore.normalize(it.automation); it.automation.detailImages.forEach(function (img) { if (!img.id) img.id = uuid(); }); });
     State.baseItemIds = {};
     State.items.forEach(function (it) { State.baseItemIds[it.id] = true; });
     clearSelection();
@@ -32,10 +41,13 @@ async function loadList(id) {
     State.remoteChanged = false;
     setDirty(false);
     UI.renderAll();
+    AutomationEditor.afterLoad();
   } catch (e) {
+    if (revision !== listLoadRevision) return;
     console.error(e);
+    State.loadError = true;
     toast("불러오지 못했습니다: " + (e.message || e), "error");
-  }
+  } finally { if (revision === listLoadRevision) { State.loading = false; AutomationEditor.publish(); } }
 }
 
 async function reloadCurrent() {
@@ -43,27 +55,19 @@ async function reloadCurrent() {
 }
 
 /* ---------- 뷰 전환 ---------- */
-async function setView(v) {
-  if (v === State.view) return;
-  if (State.view === "editor" && !(await confirmLeave())) return;
-  State.view = v;
-  document.body.classList.toggle("view-editor", v === "editor");
-  document.body.classList.toggle("view-registrar", v === "registrar");
-  document.querySelectorAll(".vs-btn").forEach(function (b) {
-    b.classList.toggle("is-active", b.dataset.view === v);
+function updatePageLinks() {
+  document.querySelectorAll('[data-route]').forEach(function (link) {
+    link.href = '../' + link.dataset.route + '/' + (State.currentListId ? '?list=' + encodeURIComponent(State.currentListId) : '');
+    if (link.dataset.route === document.body.dataset.page) { link.classList.add('is-active'); link.setAttribute('aria-current','page'); }
   });
-  setDirty(false);
-  clearSelection();
-  removedIds = [];
-  UI.applyColWidths();
-  reloadCurrent();
 }
 
 /* ---------- 저장 ----------
    성공하면 true, 저장하지 않았거나 실패하면 false 를 돌려줍니다.
    ('저장하고 이동'에서 저장이 끝났는지 확인하는 데 사용합니다) */
 async function save() {
-  if (!State.list) return false;
+  if (!State.list || State.view !== "editor" || State.saving) return false;
+  if (AutomationEditor.isChecking()) { toast("이미지 검사가 끝난 뒤 저장해 주세요.", "warn"); return false; }
   var author = (State.list.author || "").trim();
   var date = State.list.work_date || "";
   if (!date) { toast("작성일을 입력해 주세요", "error"); document.getElementById("listDate").focus(); return false; }
@@ -77,8 +81,11 @@ async function save() {
   var btn = document.getElementById("btnSave");
   btn.disabled = true;
   btn.textContent = "저장 중…";
+  State.saving = true;
+  document.querySelector('.layout').inert = true;
   try {
     renumber();
+    await AutomationEditor.uploadPending();
     await Api.saveDraft(State.list, State.items, removedIds);
     removedIds = [];
     setDirty(false);
@@ -94,6 +101,9 @@ async function save() {
     return false;
   } finally {
     btn.textContent = "편집 완료 · 저장";
+    State.saving = false;
+    document.querySelector('.layout').inert = false;
+    AutomationEditor.publish();
   }
 }
 
@@ -103,7 +113,7 @@ async function save() {
 var _leaveResolve = null;
 
 function confirmLeave() {
-  if (!State.dirty) return Promise.resolve(true);
+  if (!hasUnsavedWork()) return Promise.resolve(true);
   return new Promise(function (resolve) {
     _leaveResolve = resolve;
     document.getElementById("leaveModal").hidden = false;
@@ -231,8 +241,12 @@ function deleteSelectedRows() {
 function bindEvents() {
 
   /* GNB */
-  document.querySelectorAll(".vs-btn").forEach(function (b) {
-    b.addEventListener("click", function () { setView(b.dataset.view); });
+  document.querySelectorAll('[data-route]').forEach(function (link) {
+    link.addEventListener('click', async function (e) {
+      e.preventDefault();
+      if (State.saving) return;
+      if (await confirmLeave()) { setDirty(false); AutomationEditor.clearPending(); location.href = link.href; }
+    });
   });
   document.getElementById("btnSave").addEventListener("click", save);
 
@@ -252,6 +266,7 @@ function bindEvents() {
       await loadList(created.id);
       if (!State.items.length) {
         State.items.push(makeItem(1));
+        setDirty(true);
         UI.renderGrid();
       }
       document.getElementById("listAuthor").focus();
@@ -407,6 +422,7 @@ function bindEvents() {
         await Api.setDone(it.id, next);
         it.done = next;
         it.done_at = next ? new Date().toISOString() : null;
+        AutomationEditor.publish();
         tr.classList.toggle("is-done", next);
         UI.renderHead();
         refreshSidebar();
@@ -469,7 +485,7 @@ function bindEvents() {
 
   /* 저장하지 않고 이탈할 때 경고 */
   window.addEventListener("beforeunload", function (e) {
-    if (!State.dirty) return;
+    if (!hasUnsavedWork()) return;
     e.preventDefault();
     e.returnValue = "";
     return "";
@@ -716,6 +732,7 @@ async function onSettings() {
 function onRemote() {
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(function () {
+    if (State.saving) return;
     refreshSidebar();
     if (!State.currentListId) return;
     if (State.view === "editor" && hasUnsavedWork()) {
@@ -731,7 +748,9 @@ function onRemote() {
 
 /* ---------- 시작 ---------- */
 (async function init() {
-  document.body.classList.add("view-editor");
+  State.view = document.body.dataset.page === 'view' ? 'registrar' : 'editor';
+  updatePageLinks();
+  await AutomationEditor.init();
   restoreSidebar();
   bindEvents();
   bindColumnResize();
@@ -744,6 +763,8 @@ function onRemote() {
   UI.setSync("연결 중…");
   await refreshSidebar();
   UI.renderAll();
-  if (State.lists.length) await loadList(State.lists[0].id);
+  var requested = new URLSearchParams(location.search).get('list');
+  if (requested) await loadList(requested);
+  else if (State.lists.length) await loadList(State.lists[0].id);
   startRealtime();
 })();

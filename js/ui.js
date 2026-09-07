@@ -8,7 +8,7 @@ var UI = (function () {
     content: 110, image_usage: 140,
     need_retail: 92, need_wholesale: 92, need_naver: 92,
     price_retail: 120, price_wholesale: 120, price_wholesale_master: 120, price_naver: 120,
-    image: 84, ref_link: 110, note: 180, act: 62
+    image: 100, ref_link: 110, note: 180, act: 62, automation: 240
   };
   var COL_W_KEY = "productTool.colWidths";
   var colW = (function () {
@@ -38,6 +38,7 @@ var UI = (function () {
       if (k === "act" && State.view !== "editor") w = 0;   // 등록자 뷰에서는 관리 열이 없습니다
       // 보기 뷰에서는 숨긴 열을 접습니다. (편집 뷰에서는 항상 보이며 편집 가능)
       if (State.view === "registrar" && hidden.indexOf(k) > -1) w = 0;
+      if (k === "automation" && State.view === "editor" && State.editMode !== "automation") w = 0;
       col.style.width = w + "px";
       total += w;
     });
@@ -251,8 +252,7 @@ var UI = (function () {
       }
     });
 
-    // 이미지 — 현재 비활성
-    c.push('<td class="c-image k-image"><button class="btn-locked" disabled title="이미지 업로드는 추후 지원 예정입니다">준비 중</button></td>');
+    c.push('<td class="c-image k-image">' + AutomationEditor.thumbnailCell(it) + '</td>');
 
     // 참고 링크
     if (editor) {
@@ -271,6 +271,7 @@ var UI = (function () {
     c.push('<td class="c-act only-editor-cell">' +
       (editor ? '<button class="mini-btn danger" data-act="del" title="행 삭제">삭제</button>' : "") + "</td>");
 
+    c.push('<td class="k-automation">' + AutomationEditor.summary(it) + '</td>');
     return '<tr class="' + cls + '" data-id="' + esc(it.id) + '">' + c.join("") + "</tr>";
   }
 
@@ -309,18 +310,20 @@ var UI = (function () {
   function renderGrid() {
     var body = document.getElementById("gridBody");
     if (!State.items.length) {
-      var colspan = 19;
+      var colspan = 20;
       body.innerHTML = '<tr class="row-empty"><td colspan="' + colspan + '">' +
         (State.view === "editor"
           ? "아래 <b>+ 행 추가</b> 버튼으로 상품을 추가하세요."
           : "등록된 상품이 없습니다.") + "</td></tr>";
       renderToolbar();
       renderHeaderChecks();
+      AutomationEditor.publish();
       return;
     }
     body.innerHTML = State.items.map(renderRow).join("");
     renderToolbar();
     renderHeaderChecks();
+    AutomationEditor.publish();
   }
 
   /* ---------- 열 자동 맞춤 (손잡이 더블클릭) ---------- */
