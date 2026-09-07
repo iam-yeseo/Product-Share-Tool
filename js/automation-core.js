@@ -4,6 +4,18 @@ var AutomationCore = (function () {
   var EXTENSIONS = ['jpg', 'png', 'webp', 'gif'];
   function clone(v) { return JSON.parse(JSON.stringify(v)); }
   function slug(v) { return String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  /* 브랜드 비교 키: 대소문자·공백·기호 차이를 무시합니다. (TILTA = tilta = Tilta-) */
+  function brandKey(v) { return String(v || '').toLowerCase().replace(/[^a-z0-9\u3131-\u318e\uac00-\ud7a3]/g, ''); }
+  /* 입력 문자열과 같은 브랜드를 목록에서 찾습니다. 없으면 null. */
+  function matchBrand(brands, text) {
+    var key = brandKey(text);
+    if (!key) return null;
+    return (brands || []).find(function (b) { return brandKey(b.name) === key; }) || null;
+  }
+  function normalizeSettings(s) {
+    if (s && typeof s === 'object' && !Array.isArray(s.brands)) s.brands = [];
+    return s;
+  }
   function normalize(value) {
     var a = value && typeof value === 'object' && !Array.isArray(value) ? clone(value) : {};
     a.categoryCodes = Object.assign({ retail: '', wholesale: '' }, a.categoryCodes);
@@ -78,8 +90,9 @@ var AutomationCore = (function () {
     return issues;
   }
   function exportItem(item, settings) {
-    var a = normalize(item.automation);
-    return Object.assign({}, item, { automation: undefined, categoryCodes: a.categoryCodes, origin: a.origin,
+    var a = normalize(item.automation), brand = matchBrand(settings.brands, item.brand);
+    return Object.assign({}, item, { automation: undefined, brand_custom: undefined, link_np: undefined, categoryCodes: a.categoryCodes, origin: a.origin,
+      brandCode: brand ? brand.code : '', brandRegistered: !!brand,
       categoryPaths: { retail: path(settings.categories.retail, a.categoryCodes.retail), wholesale: path(settings.categories.wholesale, a.categoryCodes.wholesale) },
       thumbnail: Object.assign({}, a.thumbnail, { url: item.image_url || '' }),
       detailImages: a.detailImages.map(function (img, i) { return { order: i + 1, folder: img.folder, filename: img.filename, url: imageUrl(img), validation: validation(img) }; }),
@@ -87,6 +100,19 @@ var AutomationCore = (function () {
   }
   function validateSettings(s) {
     if (!s || !s.categories || !Array.isArray(s.folders)) throw new Error('설정 형식이 올바르지 않습니다.');
+    normalizeSettings(s);
+    var brandKeys = new Set(), brandCodes = new Set();
+    s.brands.forEach(function (b) {
+      var name = String(b && b.name || '').trim(), code = String(b && b.code || '').trim();
+      if (!name || name.length > 30 || name !== b.name) throw new Error('브랜드 이름은 1~30자이며 앞뒤 공백이 없어야 합니다.');
+      if (brandKeys.has(brandKey(name))) throw new Error('"' + name + '" 브랜드가 이미 있습니다. 대소문자·공백만 다른 이름도 같은 브랜드로 봅니다.');
+      brandKeys.add(brandKey(name));
+      if (code) {
+        if (!/^[A-Za-z0-9_-]{1,20}$/.test(code) || code !== b.code) throw new Error('브랜드 코드는 20자 이내의 영문·숫자·대시·밑줄입니다.');
+        if (brandCodes.has(code)) throw new Error('브랜드 코드 ' + code + '이(가) 중복됩니다.');
+        brandCodes.add(code);
+      }
+    });
     var folders = new Set();
     s.folders.forEach(function (f) {
       if (!/^[a-z0-9][a-z0-9_-]*$/.test(f) || folders.has(f)) throw new Error('폴더 이름은 중복 없는 영문 소문자·숫자·대시·밑줄이어야 합니다.');
@@ -107,6 +133,6 @@ var AutomationCore = (function () {
     });
     return s;
   }
-  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
+  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
 })();
 if (typeof module !== 'undefined') module.exports = AutomationCore;

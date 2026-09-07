@@ -21,7 +21,10 @@ var AutomationEditor = (function () {
     }).join('');
     return '<button class="automation-summary" data-auto-open="' + esc(it.id) + '">' + lines + (a.origin ? '<span>원산지 ' + esc(a.origin) + '</span>' : '') + '<span>상세 이미지 ' + a.detailImages.length + '장 · 열기</span></button>';
   }
-  function getSettings() { return settings || { categories: { retail: [], wholesale: [] }, folders: [] }; }
+  function getSettings() { return settings || { categories: { retail: [], wholesale: [] }, folders: [], brands: [] }; }
+  function brands() { return getSettings().brands || []; }
+  /* 설정(브랜드·카테고리)이 바뀌었을 때 다시 읽습니다. 화면 갱신은 호출부가 결정합니다. */
+  async function reloadSettings() { settings = (await Api.fetchAutomationSettings()).value; return settings; }
   function publish() {
     var target = document.getElementById('automation-data');
     var ready = !!(settings && State.currentListId && !State.loading && !State.loadError);
@@ -238,5 +241,5 @@ var AutomationEditor = (function () {
   }
   async function init() { bind(); try { settings=(await Api.fetchAutomationSettings()).value; } catch(e){toast('자동화 설정 불러오기 실패: '+e.message,'error');} }
   function afterLoad() { var dialog = document.getElementById("automationDialog"); if (dialog.open) { if (current()) render(); else close(); } }
-  return { afterLoad:afterLoad, isChecking:function(){return checking.size>0 || thumbnailChecks.size>0;}, init:init, open:open, publish:publish, thumbnailCell:thumbnailCell, summary:summary, clearPending:clearPending, copyPending:copyPending, uploadPending:uploadPending };
+  return { afterLoad:afterLoad, brands:brands, reloadSettings:reloadSettings, isChecking:function(){return checking.size>0 || thumbnailChecks.size>0;}, init:init, open:open, publish:publish, thumbnailCell:thumbnailCell, summary:summary, clearPending:clearPending, copyPending:copyPending, uploadPending:uploadPending };
 })();

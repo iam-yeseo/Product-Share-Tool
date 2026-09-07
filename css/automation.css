@@ -10,6 +10,18 @@ button:focus-visible,a:focus-visible{outline:3px solid #a5b4fc;outline-offset:2p
 .automation-controls select{max-width:300px;min-width:160px}
 body.view-editor:not(.automation-mode) .automation-controls{display:none}
 body.view-editor:not(.automation-mode) .k-automation{display:none}
+/* 기본 편집에서는 이미지(썸네일) 열을 숨깁니다. 자동화 편집으로 바꾸면 다시 보입니다. */
+body.view-editor:not(.automation-mode) .k-image{display:none}
+
+/* 브랜드 셀 — 목록 선택 또는 직접 입력 */
+.brand-cell{display:flex;align-items:center;gap:3px;min-width:0}
+.brand-cell .cell-select,.brand-cell .cell-input{flex:1;min-width:0}
+.brand-cell .cell-select.is-empty{color:var(--text-mute)}
+.brand-cell .mini-btn{flex:none;font-size:10px;padding:4px 6px;white-space:nowrap}
+.brand-cell .brand-custom{border-color:var(--line-strong);background:#fffdf5}
+.brand-cell .brand-custom::placeholder{color:var(--text-mute)}
+.brand-cell .brand-custom:focus{background:#fff}
+.brand-tag{display:inline-block;flex:none;font-size:10px;line-height:16px;padding:0 6px;border-radius:8px;background:#fff4dc;color:#a16207;white-space:nowrap;cursor:help}
 .automation-summary{display:flex;flex-direction:column;gap:4px;text-align:left;background:transparent;border:0;cursor:pointer;color:var(--text-sub);font-size:12px}
 .thumb-button{border:1px dashed var(--line-strong);border-radius:7px;min-height:42px;width:68px;background:var(--surface);cursor:pointer;font-size:11px}
 .thumb-button img{width:52px;height:48px;object-fit:contain;display:block;margin:auto}

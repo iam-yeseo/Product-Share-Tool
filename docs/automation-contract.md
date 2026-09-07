@@ -46,6 +46,8 @@ for (const item of payload.items) {
       "price_wholesale": null,
       "price_wholesale_master": null,
       "price_naver": 466000,
+      "brandCode": "165",
+      "brandRegistered": true,
       "categoryCodes": { "retail": "003001", "wholesale": "003001" },
       "origin": "Made in China",
       "categoryPaths": {
@@ -83,7 +85,9 @@ for (const item of payload.items) {
 }
 ```
 
-예제 URL과 검사 크기는 형식 설명용입니다. 기존 상품의 `content`, `image_usage`, `image_url`, `ref_link`, `note`, 생성/수정 시각 등도 함께 전달되며 추가 필드는 무시할 수 있게 처리하세요. 가격 `null`을 임의로 0원으로 바꾸지 마세요. 카테고리 코드는 항상 문자열이며, 화면 경로는 표시용입니다. 저장된 코드가 설정에서 사라지면 경로가 비어 있고 확인 항목에 표시됩니다. 상품과 이미지의 순서는 각각 `seq`, `order`를 사용합니다.
+예제 URL과 검사 크기는 형식 설명용입니다. 기존 상품의 `content`, `image_url`, `ref_link`, `note`, 생성/수정 시각 등도 함께 전달되며 추가 필드는 무시할 수 있게 처리하세요. `image_usage`는 더 이상 화면에서 입력하지 않지만 기존 값이 남아 있을 수 있습니다.
+
+`brand`는 언제나 문자열입니다. `brandRegistered=true`이면 설정의 브랜드 목록(`app_settings.product_automation_v1.brands`)과 대소문자·공백·기호를 무시하고 일치하는 항목이 있다는 뜻이며, `brandCode`에 그 항목의 고도몰 브랜드 코드(비어 있을 수 있음)가 들어갑니다. `brandRegistered=false`는 편집 페이지에서 직접 입력한 브랜드이므로 등록 프로그램에서 브랜드 매칭 경고로 다루세요. 가격 `null`을 임의로 0원으로 바꾸지 마세요. 카테고리 코드는 항상 문자열이며, 화면 경로는 표시용입니다. 저장된 코드가 설정에서 사라지면 경로가 비어 있고 확인 항목에 표시됩니다. 상품과 이미지의 순서는 각각 `seq`, `order`를 사용합니다.
 
 ## 이미지 검사
 
@@ -99,7 +103,7 @@ for (const item of payload.items) {
 
 ## 저장 위치
 
-DB 직접 연동 시 `product_items.automation.categoryCodes`, `.origin`, `.detailImages`, `.detailHtml`, `.thumbnail`을 사용합니다. `thumbnail`에는 Storage `path`만 있고 공개 URL은 `image_url` 컬럼에 있습니다. 썸네일 공개 URL은 기존 `image_url`에도 저장합니다. 원본 JSON의 이미지에는 내부 ID가 있고 DOM 내보내기에는 `order`가 있습니다. 상세 HTML을 직접 재생성한다면 `js/automation-core.js`의 주소 검증과 생성 규칙을 함께 사용하세요. 이 변경은 실제 고도몰에 상품을 자동 등록하는 프로그램 자체를 포함하지 않습니다.
+DB 직접 연동 시 `product_items.automation.categoryCodes`, `.origin`, `.detailImages`, `.detailHtml`, `.thumbnail`을 사용합니다. 브랜드는 `product_items.brand` 문자열이며 `brandCode`는 설정의 브랜드 목록에서 계산한 값이라 DB 상품 행에는 없습니다. `thumbnail`에는 Storage `path`만 있고 공개 URL은 `image_url` 컬럼에 있습니다. 썸네일 공개 URL은 기존 `image_url`에도 저장합니다. 원본 JSON의 이미지에는 내부 ID가 있고 DOM 내보내기에는 `order`가 있습니다. 상세 HTML을 직접 재생성한다면 `js/automation-core.js`의 주소 검증과 생성 규칙을 함께 사용하세요. 이 변경은 실제 고도몰에 상품을 자동 등록하는 프로그램 자체를 포함하지 않습니다.
 
 ## 등록 상태 기록
 

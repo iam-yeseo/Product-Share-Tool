@@ -170,7 +170,7 @@ function addRow() {
   var rows = document.querySelectorAll("#gridBody .row");
   var last = rows[rows.length - 1];
   if (last) {
-    var input = last.querySelector('.cell-input[data-field="brand"]');
+    var input = last.querySelector('[data-field="brand"]');
     if (input) input.focus();
   }
 }
@@ -206,6 +206,35 @@ function deleteRow(idx) {
   setDirty(true);
   UI.renderGrid();
   UI.renderHead();
+}
+
+/* 브랜드 '직접 입력' → 목록 선택으로 되돌리기.
+   입력한 이름이 목록에 있으면 그 브랜드를 고르고, 없으면 비웁니다. */
+function brandToList(idx) {
+  var it = State.items[idx];
+  var matched = AutomationCore.matchBrand(AutomationEditor.brands(), it.brand);
+  var before = it.brand;
+  it.brand = matched ? matched.name : "";
+  it.brand_custom = false;
+  if (it.brand !== before) setDirty(true);
+  UI.renderGrid();
+  var sel = document.querySelector('tr[data-id="' + it.id + '"] .brand-select');
+  if (sel) sel.focus();
+}
+
+/* 엑셀 등에서 들어온 브랜드 문자열을 등록된 목록과 맞춥니다.
+   목록에 있으면 등록된 이름으로 바꾸고(선택 상태), 없으면 직접 입력 상태로 둡니다. */
+function applyBrandMatching(items) {
+  var brands = AutomationEditor.brands();
+  var stat = { matched: 0, custom: 0, empty: 0 };
+  items.forEach(function (it) {
+    var text = (it.brand || "").trim();
+    var matched = AutomationCore.matchBrand(brands, text);
+    if (matched) { it.brand = matched.name; it.brand_custom = false; stat.matched++; }
+    else if (text) { it.brand = text; it.brand_custom = true; stat.custom++; }
+    else { it.brand = ""; it.brand_custom = false; stat.empty++; }
+  });
+  return stat;
 }
 
 /* ---------- 체크한 행 일괄 처리 (편집자 전용) ---------- */
@@ -467,6 +496,26 @@ function bindEvents() {
     }
 
     var f = e.target.dataset.field;
+
+    /* 브랜드 선택 — 목록 값 또는 '직접 입력'으로 전환 */
+    if (f === "brand" && e.target.classList.contains("brand-select")) {
+      if (e.target.value === UI.BRAND_CUSTOM) {
+        it.brand_custom = true;
+        if (it.brand) setDirty(true);   // 선택돼 있던 브랜드를 비우고 직접 입력으로 바꿉니다
+        it.brand = "";
+        UI.renderGrid();
+        var custom = document.querySelector('tr[data-id="' + it.id + '"] .brand-custom');
+        if (custom) custom.focus();
+        return;
+      }
+      it.brand_custom = false;
+      it.brand = e.target.value;
+      e.target.classList.toggle("is-empty", !it.brand);
+      e.target.title = it.brand || "브랜드를 선택하거나 직접 입력하세요";
+      setDirty(true);
+      return;
+    }
+
     if (f && e.target.tagName === "SELECT") {
       it[f] = e.target.value;
       setDirty(true);
@@ -488,6 +537,7 @@ function bindEvents() {
     if (mini.dataset.act === "up") moveRow(idx, -1);
     else if (mini.dataset.act === "down") moveRow(idx, 1);
     else if (mini.dataset.act === "del") deleteRow(idx);
+    else if (mini.dataset.act === "brand-list") brandToList(idx);
   });
 
   /* 저장하지 않고 이탈할 때 경고 */
@@ -636,6 +686,7 @@ function bindImport() {
         return;
       }
       pendingImport = res;
+      pendingImport.brandStat = applyBrandMatching(res.items);
       showImportModal(file.name, res);
     } catch (err) {
       console.error(err);
@@ -661,6 +712,13 @@ function showImportModal(fileName, res) {
       (res.workDate ? "<span>작성일 <b>" + esc(res.workDate) + "</b></span>" : "") +
     "</div>";
 
+  var bs = res.brandStat;
+  var brandLine = bs
+    ? '<p class="im-brand">브랜드 : 등록된 브랜드로 자동 선택 <b>' + bs.matched + "개</b>" +
+      (bs.custom ? " · 목록에 없어 직접 입력으로 표시 <b>" + bs.custom + "개</b>" : "") +
+      (bs.empty ? " · 비어 있음 <b>" + bs.empty + "개</b>" : "") + "</p>"
+    : "";
+
   var map = '<ul class="im-map">' + res.mappings.map(function (m) {
     return "<li>" +
       '<span class="im-from">' + esc(m.label) + "</span>" +
@@ -674,7 +732,7 @@ function showImportModal(fileName, res) {
       res.ignored.map(function (m) { return esc(m.label); }).join(", ") + "</p>"
     : "";
 
-  document.getElementById("imSummary").innerHTML = stat + map + ignored;
+  document.getElementById("imSummary").innerHTML = stat + brandLine + map + ignored;
   document.getElementById("importModal").hidden = false;
 }
 
@@ -723,8 +781,22 @@ function startRealtime() {
     });
 }
 
-/* 열 숨김 설정이 바뀌면(다른 사람이 변경) 다시 불러와 적용합니다. */
-async function onSettings() {
+/* 설정이 바뀌면(다른 사람이 변경) 다시 불러와 적용합니다.
+   열 숨김뿐 아니라 브랜드·카테고리 설정도 새로 읽습니다. */
+async function onSettings(payload) {
+  var key = payload && payload.new && payload.new.key;
+  if (key === "product_automation_v1") {
+    try {
+      await AutomationEditor.reloadSettings();
+      // 입력 중인 셀이 없을 때만 표를 다시 그립니다. (브랜드 목록 반영)
+      var grid = document.getElementById("grid");
+      if (State.currentListId && !(grid && grid.contains(document.activeElement))) UI.renderGrid();
+      AutomationEditor.afterLoad();
+    } catch (e) {
+      console.error(e);
+    }
+    return;
+  }
   if (_ignoreColEcho) return;   // 내가 방금 저장한 변경이면 무시
   try {
     State.hiddenCols = await Api.fetchHiddenCols();
