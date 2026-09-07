@@ -150,6 +150,11 @@ var Api = (function () {
 
   async function fetchAutomationSettings() {
     var row = check(await supabaseClient.from("app_settings").select("value,updated_at").eq("key", "product_automation_v1").single());
+    // 공용 설정에 brands 키가 아직 없으면(마이그레이션 미적용) 배포된 기본 브랜드 목록을 씁니다.
+    // 설정 페이지에서 한 번 저장하면 그 목록이 DB에 들어갑니다. 빈 배열은 의도한 상태로 보고 그대로 둡니다.
+    if (row.value && typeof row.value === "object" && !("brands" in row.value) && typeof BRAND_DEFAULTS !== "undefined") {
+      row.value.brands = AutomationCore.clone(BRAND_DEFAULTS);
+    }
     AutomationCore.validateSettings(row.value);
     return row;
   }

@@ -3,4 +3,7 @@ const fs = require('node:fs');
 for (const file of fs.readdirSync('js').filter(f => f.endsWith('.js'))) execFileSync(process.execPath,['--check','js/'+file]);
 const core = require('../js/automation-core.js');
 core.validateSettings(JSON.parse(fs.readFileSync('data/automation-settings.json')));
-console.log('JavaScript 및 카테고리 구조 검사 통과');
+const generated = fs.readFileSync('js/brand-defaults.js', 'utf8');
+const expected = JSON.stringify(JSON.parse(fs.readFileSync('data/automation-settings.json')).brands);
+if (!generated.includes('var BRAND_DEFAULTS = ' + expected + ';')) throw new Error('js/brand-defaults.js 가 data/automation-settings.json 과 다릅니다. npm run build 를 실행하세요.');
+console.log('JavaScript, 카테고리 구조, 기본 브랜드 목록 검사 통과');

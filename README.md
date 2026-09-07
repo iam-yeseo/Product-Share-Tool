@@ -105,7 +105,7 @@ Supabase JS는 `2.115.0`으로 고정했고 엑셀 파싱은 SheetJS CDN을 사�
 프론트엔드 배포 전에 [마이그레이션](supabase/migrations/20260907013210_product_automation.sql)을 기존 Supabase 프로젝트에 적용합니다. Supabase migration 이력으로 한 번만 적용하며 기존 상품 및 기존 자동화 설정은 보존합니다.
 
 - `product_items.automation`: 상품별 카테고리·이미지·검사 결과 JSON.
-- `app_settings`의 `product_automation_v1`: 공용 브랜드 목록, 카테고리와 이미지 폴더 설정. 브랜드 초기값은 [마이그레이션](supabase/migrations/20260907150000_brand_settings.sql)이 기존 설정에 `brands`를 덧붙입니다. 적용 전에는 브랜드 목록이 비어 있어 직접 입력만 가능합니다.
+- `app_settings`의 `product_automation_v1`: 공용 브랜드 목록, 카테고리와 이미지 폴더 설정. 브랜드 초기값은 [마이그레이션](supabase/migrations/20260907150000_brand_settings.sql)이 기존 설정에 `brands`를 덧붙입니다. 아직 `brands`가 없는 설정을 읽으면 프론트엔드가 같은 초기 목록(`js/brand-defaults.js`, `npm run build`로 생성)을 대신 보여 주고, 설정 페이지에서 한 번 저장하면 DB에도 들어갑니다.
 - `save_product_draft`: 기존 anon/authenticated 권한으로 호출하는 SECURITY INVOKER 저장 함수.
 - `product_registrations`: 몰별 등록 상태 ([마이그레이션](supabase/migrations/20260907120000_product_registrations.sql)). 자동화 프로그램이 기록하고 웹툴은 읽기만 합니다.
 - `product-thumbnails`: 공개 이미지 버킷. 기존 목록 UUID 아래 새 파일 업로드만 허용하며 덮어쓰기·삭제 권한은 추가하지 않습니다.

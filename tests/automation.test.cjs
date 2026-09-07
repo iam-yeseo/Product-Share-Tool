@@ -130,3 +130,17 @@ test('brand matching on import selects registered names and keeps unknown names 
  assert.equal(items[1].brand,'Unknown Maker');assert.equal(items[1].brand_custom,true);
  assert.equal(items[2].brand,'');assert.equal(items[3].brand,'Electro-Voice');
 });
+test('settings without a brands key fall back to the built-in defaults; an explicit empty list is kept',async()=>{
+ const defaults=JSON.parse(fs.readFileSync(require.resolve('../js/brand-defaults.js'),'utf8').match(/var BRAND_DEFAULTS = (\[.*\]);/)[1]);
+ assert.equal(defaults.length,settings.brands.length);
+ function api(value,withDefaults){
+  const context={AutomationCore:C,supabaseClient:{from(){return {select(){return this;},eq(){return this;},async single(){return {data:{value,updated_at:'rev'},error:null};}};}}};
+  if(withDefaults)context.BRAND_DEFAULTS=defaults;
+  vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('../js/api.js'),'utf8'),context);return context.Api.fetchAutomationSettings();
+ }
+ const legacy={categories:settings.categories,folders:settings.folders};
+ assert.equal((await api(C.clone(legacy),true)).value.brands.length,84);
+ assert.equal((await api(C.clone(legacy),false)).value.brands.length,0);
+ assert.equal((await api({...C.clone(legacy),brands:[]},true)).value.brands.length,0);
+ assert.equal((await api({...C.clone(legacy),brands:[{code:'',name:'Only',active:true}]},true)).value.brands[0].name,'Only');
+});
