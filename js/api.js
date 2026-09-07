@@ -100,7 +100,7 @@ var Api = (function () {
           name_naver: it.name_naver || "",
           model: it.model || "",
           content: it.content || "",
-          image_usage: it.image_usage || "",
+          image_usage: it.image_usage || "",   // 화면에서는 뺐지만 DB 열이 남아 있어 기존 값을 그대로 보냅니다
           need_retail: it.need_retail || "",
           need_wholesale: it.need_wholesale || "",
           need_naver: it.need_naver || "",

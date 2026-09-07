@@ -3,10 +3,21 @@
 <body class="settings-page">
 <header class="gnb"><div class="gnb-left"><span class="logo">상품 등록 요청</span></div><div class="gnb-center"><nav class="view-switch" aria-label="페이지"><a class="vs-btn" data-route="edit" href="../edit/">편집</a><a class="vs-btn" data-route="view" href="../view/">보기</a><a class="vs-btn is-active" aria-current="page" href="../settings/">설정</a></nav></div><div class="gnb-right"><span id="settingsState" class="sync-state">불러오는 중…</span><button id="saveSettings" class="btn btn-primary" disabled>설정 저장</button></div></header>
 <main class="settings-main" inert>
-<section class="settings-intro"><h1>상품 등록 설정</h1><p>몰별 카테고리와 상세 이미지 폴더를 관리합니다. 저장한 설정은 모든 사용자에게 공유됩니다.</p></section>
+<section class="settings-intro"><h1>상품 등록 설정</h1><p>브랜드 목록, 몰별 카테고리, 상세 이미지 폴더를 관리합니다. 저장한 설정은 모든 사용자에게 공유됩니다.</p></section>
 <div id="settingsError" class="settings-error" hidden></div>
-<div class="settings-tabs" role="group" aria-label="설정 항목"><button class="btn is-active" data-settings-tab="retail">소매몰 카테고리</button><button class="btn" data-settings-tab="wholesale">도매몰 카테고리</button><button class="btn" data-settings-tab="folders">이미지 폴더</button></div>
-<section id="categorySettings" class="settings-card">
+<div class="settings-tabs" role="group" aria-label="설정 항목"><button class="btn is-active" data-settings-tab="brands">브랜드</button><button class="btn" data-settings-tab="retail">소매몰 카테고리</button><button class="btn" data-settings-tab="wholesale">도매몰 카테고리</button><button class="btn" data-settings-tab="folders">이미지 폴더</button></div>
+<section id="brandSettings" class="settings-card">
+<div class="section-title"><div><h2>브랜드</h2><p id="brandCount" class="field-note"></p></div><input id="brandSearch" type="search" placeholder="브랜드 이름 또는 코드 검색" aria-label="브랜드 검색"></div>
+<p class="field-note">편집 페이지의 브랜드 칸에서 고를 수 있는 목록입니다. 목록에 없는 브랜드는 편집 페이지에서 <b>직접 입력</b>으로 넣을 수 있고, 엑셀을 불러올 때 이름이 같은 브랜드(대소문자·공백 무시)는 자동으로 선택됩니다.</p>
+<div class="settings-columns"><div id="brandList" class="category-tree" aria-label="브랜드 목록"></div><form id="brandForm" class="category-form">
+<h3 id="brandFormTitle">브랜드 추가</h3>
+<label class="field">브랜드 이름<input id="brandName" required maxlength="30" placeholder="TILTA"><span class="field-note">상품에 저장되는 값입니다. 고도몰 브랜드명과 같게 적어 주세요.</span></label>
+<label class="field">브랜드 코드<input id="brandCode" maxlength="20" pattern="[A-Za-z0-9_\-]{1,20}" placeholder="165"><span class="field-note">고도몰 브랜드 관리의 코드(선택 입력). 참고용이며 비워 둘 수 있습니다.</span></label>
+<label><input id="brandActive" type="checkbox" checked> 새 상품에서 선택 가능</label>
+<div class="action-row"><button class="btn btn-primary" type="submit">변경 반영</button><button class="btn" id="newBrand" type="button">새 브랜드</button><button class="btn btn-danger-ghost" id="deleteBrand" type="button" hidden>삭제</button></div>
+<p class="field-note">이름을 바꾸거나 삭제해도 이미 저장된 상품의 브랜드 문자열은 바뀌지 않습니다. 목록과 맞지 않게 된 상품은 편집 페이지에서 직접 입력으로 표시됩니다.</p>
+</form></div></section>
+<section id="categorySettings" class="settings-card" hidden>
 <div class="section-title"><div><h2 id="categoryHeading">소매몰 카테고리</h2><p id="categoryCount" class="field-note"></p></div><input id="categorySearch" type="search" placeholder="이름 또는 코드 검색" aria-label="카테고리 검색"></div>
 <div class="settings-columns"><div id="categoryTree" class="category-tree" aria-label="카테고리 목록"></div><form id="categoryForm" class="category-form">
 <h3 id="categoryFormTitle">카테고리 추가</h3>
@@ -17,7 +28,7 @@
 <label><input id="categoryActive" type="checkbox" checked> 새 상품에서 선택 가능</label>
 <div class="action-row"><button class="btn btn-primary" type="submit">변경 반영</button><button class="btn" id="newCategory" type="button">새 카테고리</button></div><p class="field-note">기존 코드는 보존합니다. 코드 변경이 필요하면 새로 추가하고 기존 항목의 선택을 중지하세요.</p>
 </form></div></section>
-<section id="folderSettings" class="settings-card" hidden><h2>상세 이미지 폴더</h2><p class="field-note">기본 주소: https://calla.hgodo.com/product/<br>폴더를 수정해도 이미 저장한 상품 주소는 유지됩니다.</p><div id="folderList" class="folder-list"></div><form id="folderForm" class="action-row"><input id="newFolderName" placeholder="새 폴더 이름" aria-label="새 폴더 이름" required pattern="[a-z0-9][a-z0-9_-]*"><button class="btn btn-primary">폴더 추가</button></form></section>
+<section id="folderSettings" class="settings-card" hidden><h2>상세 이미지 폴더</h2><p class="field-note">기본 주소: https://calla.hgodo.com/product/<br>폴더를 수정해도 이미 저장한 상품 주소는 유지됩니다.</p><div id="folderList" class="folder-list"></div><form id="folderForm" class="action-row"><input id="newFolderName" placeholder="새 폴더 이름" aria-label="새 폴더 이름" required pattern="[a-z0-9][a-z0-9_\-]*"><button class="btn btn-primary">폴더 추가</button></form></section>
 <p class="field-note">변경 반영 후 상단의 <b>설정 저장</b>을 눌러야 다른 사용자에게 적용됩니다.</p>
 </main><div id="toast" class="toast" hidden></div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0"></script><script src="../js/supabaseClient.js"></script><script src="../js/utils.js"></script><script src="../js/automation-core.js"></script><script src="../js/api.js"></script><script src="../js/settings.js"></script></body></html>

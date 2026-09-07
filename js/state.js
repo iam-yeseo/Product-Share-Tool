@@ -25,7 +25,6 @@ var HIDEABLE_COLS = [
   { key: "name_naver", label: "상품명 · 네이버" },
   { key: "model", label: "모델명" },
   { key: "content", label: "내용" },
-  { key: "image_usage", label: "이미지 사용 여부" },
   { key: "need_retail", label: "등록 필요 · 소매몰" },
   { key: "need_wholesale", label: "등록 필요 · 도매몰" },
   { key: "need_naver", label: "등록 필요 · 네이버" },
@@ -67,7 +66,6 @@ function makeItem(seq) {
     name_naver: "",
     model: "",
     content: DEFAULT_CONTENT,
-    image_usage: "",
     need_retail: DEFAULT_NEED,
     need_wholesale: DEFAULT_NEED,
     need_naver: DEFAULT_NEED,
@@ -86,7 +84,7 @@ function makeItem(seq) {
 
 /* 행 복사 — 새 id 를 받고, 등록 완료 상태는 물려받지 않습니다. */
 var COPY_FIELDS = [
-  "brand", "name_own", "name_naver", "model", "content", "image_usage",
+  "brand", "name_own", "name_naver", "model", "content",
   "need_retail", "need_wholesale", "need_naver",
   "price_retail", "price_wholesale", "price_wholesale_master", "price_naver",
   "image_url", "ref_link", "note"
@@ -98,6 +96,13 @@ function copyItem(src) {
   it.automation.detailImages.forEach(function (img) { img.id = uuid(); });
   if (typeof AutomationEditor !== 'undefined') AutomationEditor.copyPending(src.id, it.id);
   return it;
+}
+
+/* 브랜드 셀이 목록 선택인지 직접 입력인지 — 저장하지 않는 화면 상태입니다.
+   처음에는 브랜드 문자열이 목록과 맞지 않을 때만 직접 입력으로 봅니다. */
+function isBrandCustom(it, brands) {
+  if (typeof it.brand_custom === "boolean") return it.brand_custom;
+  return !!(it.brand || "").trim() && !AutomationCore.matchBrand(brands, it.brand);
 }
 
 /* 순번 1..n 로 다시 매기기 */

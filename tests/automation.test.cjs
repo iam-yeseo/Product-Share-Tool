@@ -83,3 +83,50 @@ test('origin is trimmed on normalize and included in the export payload',()=>{
  const row={id:'o',name_own:'상품',need_retail:'필요',need_wholesale:'불필요',automation:{categoryCodes:{retail:'020001',wholesale:''},detailImages:[],origin:'Made in Korea'}};
  assert.equal(C.exportItem(row,settings).origin,'Made in Korea');
 });
+test('brand list: initial data, case/space-insensitive matching, and duplicate/format validation',()=>{
+ assert.equal(settings.brands.length,84);
+ assert.equal(C.matchBrand(settings.brands,' tilta ').name,'TILTA');
+ assert.equal(C.matchBrand(settings.brands,'electro voice').name,'Electro-Voice');
+ assert.equal(C.matchBrand(settings.brands,'IO DATA').name,'I-O DATA');
+ assert.equal(C.matchBrand(settings.brands,'커넥터'),null);
+ assert.equal(C.matchBrand(settings.brands,''),null);
+ assert.equal(C.matchBrand(undefined,'TILTA'),null);
+ assert.equal(settings.brands.filter(b=>C.brandKey(b.name)==='panasonic').length,1);
+ const s=C.clone(settings);s.brands.push({code:'',name:'Tilta',active:true});assert.throws(()=>C.validateSettings(s),/이미 있습니다/);
+ s.brands.pop();s.brands.push({code:'165',name:'NEWBRAND',active:true});assert.throws(()=>C.validateSettings(s),/중복/);
+ s.brands.pop();s.brands.push({code:'',name:' spaced',active:true});assert.throws(()=>C.validateSettings(s));
+ s.brands.pop();s.brands.push({code:'x y',name:'OK',active:true});assert.throws(()=>C.validateSettings(s));
+ s.brands.pop();s.brands.push({code:'',name:'한글 브랜드',active:false});C.validateSettings(s);
+ const legacy={categories:{retail:[],wholesale:[]},folders:[]};C.validateSettings(legacy);assert.deepEqual(legacy.brands,[]);
+});
+test('export marks registered brands and strips transient UI flags',()=>{
+ const row={id:'b',brand:'tilta',brand_custom:false,link_np:true,name_own:'상품',need_retail:'불필요',need_wholesale:'불필요',automation:{}};
+ const out=C.exportItem(row,settings);
+ assert.equal(out.brand,'tilta');assert.equal(out.brandCode,'165');assert.equal(out.brandRegistered,true);
+ assert.equal('brand_custom' in JSON.parse(JSON.stringify(out)),false);assert.equal('link_np' in JSON.parse(JSON.stringify(out)),false);
+ const custom=C.exportItem({...row,brand:'Unknown Maker'},settings);assert.equal(custom.brandCode,'');assert.equal(custom.brandRegistered,false);
+ assert.equal(C.exportItem({...row,brand:''},{categories:settings.categories,folders:[]}).brandRegistered,false);
+});
+test('new rows no longer carry image_usage and brand custom state derives from the list',()=>{
+ const context={AutomationCore:C,uuid:()=>'id',document:{getElementById:()=>null}};
+ vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('../js/state.js'),'utf8'),context);
+ const it=context.makeItem(1);assert.equal('image_usage' in it,false);assert.equal(context.COPY_FIELDS.includes('image_usage'),false);
+ assert.equal(context.HIDEABLE_COLS.some(c=>c.key==='image_usage'),false);
+ assert.equal(context.isBrandCustom({brand:''},settings.brands),false);
+ assert.equal(context.isBrandCustom({brand:'Tilta'},settings.brands),false);
+ assert.equal(context.isBrandCustom({brand:'Unknown'},settings.brands),true);
+ assert.equal(context.isBrandCustom({brand:'Tilta',brand_custom:true},settings.brands),true);
+});
+test('brand matching on import selects registered names and keeps unknown names as custom text',()=>{
+ const context={AutomationCore:C,AutomationEditor:{brands:()=>settings.brands},State:{items:[]}};
+ vm.createContext(context);
+ const app=fs.readFileSync(require.resolve('../js/app.js'),'utf8');
+ const start=app.indexOf('function applyBrandMatching'),end=app.indexOf('/* ---------- 체크한 행 일괄 처리');
+ vm.runInContext(app.slice(start,end),context);
+ const items=[{brand:'tilta '},{brand:'Unknown Maker'},{brand:''},{brand:'Electro Voice'}];
+ const stat=context.applyBrandMatching(items);
+ assert.equal(JSON.stringify(stat),JSON.stringify({matched:2,custom:1,empty:1}));
+ assert.equal(items[0].brand,'TILTA');assert.equal(items[0].brand_custom,false);
+ assert.equal(items[1].brand,'Unknown Maker');assert.equal(items[1].brand_custom,true);
+ assert.equal(items[2].brand,'');assert.equal(items[3].brand,'Electro-Voice');
+});

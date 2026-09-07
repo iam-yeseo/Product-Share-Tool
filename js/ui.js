@@ -4,8 +4,8 @@ var UI = (function () {
 
   /* ---------- 열 너비 (마우스로 조절, 브라우저에 기억) ---------- */
   var DEFAULT_COL_W = {
-    check: 58, seq: 84, brand: 130, name_own: 240, name_naver: 240, model: 140,
-    content: 110, image_usage: 140,
+    check: 58, seq: 84, brand: 190, name_own: 240, name_naver: 240, model: 140,
+    content: 110,
     need_retail: 92, need_wholesale: 92, need_naver: 92,
     price_retail: 120, price_wholesale: 120, price_wholesale_master: 120, price_naver: 120,
     image: 100, ref_link: 110, note: 180, act: 62, automation: 240
@@ -39,6 +39,8 @@ var UI = (function () {
       // 보기 뷰에서는 숨긴 열을 접습니다. (편집 뷰에서는 항상 보이며 편집 가능)
       if (State.view === "registrar" && hidden.indexOf(k) > -1) w = 0;
       if (k === "automation" && State.view === "editor" && State.editMode !== "automation") w = 0;
+      // 기본 편집에서는 이미지(썸네일) 열을 접습니다. 자동화 편집에서 다시 펼쳐집니다.
+      if (k === "image" && State.view === "editor" && State.editMode !== "automation") w = 0;
       col.style.width = w + "px";
       total += w;
     });
@@ -127,6 +129,39 @@ var UI = (function () {
     return '<select class="cell-select" data-field="' + field + '">' + opts + "</select>";
   }
 
+  /* 브랜드 셀 — 등록된 브랜드 목록에서 고르거나 '직접 입력'으로 바꿔 자유롭게 씁니다.
+     저장되는 값은 언제나 브랜드 문자열 하나입니다. */
+  var BRAND_CUSTOM = "__custom__";
+  function brandCell(it) {
+    var brands = AutomationEditor.brands();
+    var matched = AutomationCore.matchBrand(brands, it.brand);
+    if (isBrandCustom(it, brands)) {
+      return '<div class="brand-cell is-custom">' +
+        '<input class="cell-input brand-custom" data-field="brand" value="' + esc(it.brand) + '" placeholder="브랜드 직접 입력" maxlength="30">' +
+        '<button class="mini-btn" data-act="brand-list" title="등록된 브랜드 목록에서 선택">목록</button>' +
+        "</div>";
+    }
+    var value = matched ? matched.name : "";
+    var opts = '<option value="">브랜드 선택</option>';
+    brands.slice().sort(function (a, b) { return a.name.localeCompare(b.name, "en", { sensitivity: "base" }); }).forEach(function (b) {
+      if (b.active === false && b !== matched) return;   // 사용 중지 브랜드는 이미 선택된 경우에만 보입니다
+      opts += '<option value="' + esc(b.name) + '"' + (b === matched ? " selected" : "") + ">" +
+        esc(b.name) + (b.active === false ? " · 사용 중지" : "") + "</option>";
+    });
+    opts += '<option value="' + BRAND_CUSTOM + '">직접 입력…</option>';
+    return '<div class="brand-cell"><select class="cell-select brand-select' + (value ? "" : " is-empty") +
+      '" data-field="brand" title="' + esc(value || "브랜드를 선택하거나 직접 입력하세요") + '">' + opts + "</select></div>";
+  }
+  /* 보기 뷰 — 목록에 없는 브랜드는 표시해 둡니다 (자동화 프로그램의 브랜드 매칭 참고용) */
+  function brandRO(it) {
+    var s = (it.brand || "").trim();
+    if (!s) return ro(s, true);
+    var matched = AutomationCore.matchBrand(AutomationEditor.brands(), s);
+    return '<span class="ro-cell"><span class="ro-text">' + esc(s) + "</span>" +
+      (matched ? "" : '<span class="brand-tag" title="등록된 브랜드 목록에 없는 이름입니다 (직접 입력)">직접 입력</span>') +
+      '<button class="copy-btn" data-copy="' + esc(s) + '" title="복사">복사</button></span>';
+  }
+
   function priceInput(field, val, disabled) {
     return '<span class="price-wrap' + (disabled ? " is-linked" : "") + '">' +
       '<span class="won">₩</span>' +
@@ -209,7 +244,7 @@ var UI = (function () {
     }
 
     // 브랜드 / 상품명(자사몰) / 상품명(네이버) / 모델명
-    c.push('<td class="c-brand k-brand">' + (editor ? textInput("brand", it.brand) : ro(it.brand, true)) + "</td>");
+    c.push('<td class="c-brand k-brand">' + (editor ? brandCell(it) : brandRO(it)) + "</td>");
     c.push('<td class="c-name k-name_own">' + (editor ? textInput("name_own", it.name_own) : ro(it.name_own, true)) + "</td>");
     c.push('<td class="c-name k-name_naver">' + (editor ? textInput("name_naver", it.name_naver) : ro(it.name_naver, true)) + "</td>");
     c.push('<td class="c-model k-model">' + (editor ? textInput("model", it.model) : ro(it.model, true)) + "</td>");
@@ -217,10 +252,6 @@ var UI = (function () {
     // 내용
     c.push('<td class="c-content k-content">' +
       (editor ? selectInput("content", it.content, CONTENT_OPTIONS) : roTag(it.content, "content")) + "</td>");
-
-    // 이미지 사용 여부
-    c.push('<td class="c-imguse k-image_usage">' +
-      (editor ? textInput("image_usage", it.image_usage) : ro(it.image_usage, true)) + "</td>");
 
     // 등록 필요 3종 — 편집: 체크박스(체크=필요), 보기: 태그
     ["need_retail", "need_wholesale", "need_naver"].forEach(function (f) {
@@ -330,7 +361,7 @@ var UI = (function () {
   function renderGrid() {
     var body = document.getElementById("gridBody");
     if (!State.items.length) {
-      var colspan = 20;
+      var colspan = 19;
       body.innerHTML = '<tr class="row-empty"><td colspan="' + colspan + '">' +
         (State.view === "editor"
           ? "아래 <b>+ 행 추가</b> 버튼으로 상품을 추가하세요."
@@ -355,7 +386,6 @@ var UI = (function () {
       case "name_naver": return it.name_naver || "";
       case "model": return it.model || "";
       case "content": return it.content || "";
-      case "image_usage": return it.image_usage || "";
       case "ref_link": return it.ref_link || "";
       case "note": return it.note || "";
       case "price_retail":
@@ -366,7 +396,7 @@ var UI = (function () {
       default: return "";
     }
   }
-  var EXTRA_PAD = { seq: 52, content: 46, price_retail: 34, price_wholesale: 34, price_wholesale_master: 34, price_naver: 34 };
+  var EXTRA_PAD = { seq: 52, brand: 70, content: 46, price_retail: 34, price_wholesale: 34, price_wholesale_master: 34, price_naver: 34 };
 
   function autoFitColumn(key) {
     var cols = document.querySelectorAll("#gridCols col");
@@ -458,6 +488,7 @@ var UI = (function () {
     renderToolbar: renderToolbar,
     renderHeaderChecks: renderHeaderChecks,
     autoFitColumn: autoFitColumn,
+    BRAND_CUSTOM: BRAND_CUSTOM,
     updateHideStyle: updateHideStyle,
     renderColPanel: renderColPanel,
     setSync: setSync,

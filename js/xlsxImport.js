@@ -100,7 +100,6 @@ var XlsxImport = (function () {
     name_naver: "상품명(네이버)",
     model: "모델명",
     content: "내용",
-    image_usage: "이미지 사용 여부",
     need_retail: "등록 필요(소매몰)",
     need_wholesale: "등록 필요(도매몰)",
     need_naver: "등록 필요(네이버)",
@@ -127,8 +126,8 @@ var XlsxImport = (function () {
     }
     if (has(p, ["모델", "품목코드", "모델명"])) return ["model"];
 
-    // '이미지 사용 여부'가 '이미지'보다 먼저 걸러져야 합니다.
-    if (has(both, ["이미지사용", "이미지여부"])) return ["image_usage"];
+    // '이미지 사용 여부' 열은 더 이상 쓰지 않습니다. (이미지 열과 함께 가져오지 않음)
+    if (has(both, ["이미지사용", "이미지여부"])) return [];
 
     if (has(p, ["내용", "구분"])) return ["content"];
 

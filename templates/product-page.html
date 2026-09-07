@@ -103,7 +103,7 @@
           <div id="colSettingsPanel" class="col-panel" hidden></div>
         </div>
         <span id="selCount" class="sel-count">행을 체크하면 복사·삭제할 수 있습니다</span>
-        <span class="foot-hint">저장을 눌러야 다른 사람에게 반영됩니다.</span>
+        <span class="foot-hint">저장을 눌러야 다른 사람에게 반영됩니다. 썸네일은 <b>자동화 편집</b>에서 넣습니다.</span>
       </div>
 
       <div class="automation-toolbar">
@@ -124,7 +124,7 @@
           <colgroup id="gridCols">
             <col data-key="check"><col data-key="seq"><col data-key="brand">
             <col data-key="name_own"><col data-key="name_naver"><col data-key="model">
-            <col data-key="content"><col data-key="image_usage">
+            <col data-key="content">
             <col data-key="need_retail"><col data-key="need_wholesale"><col data-key="need_naver">
             <col data-key="price_retail"><col data-key="price_wholesale"><col data-key="price_wholesale_master"><col data-key="price_naver">
             <col data-key="image"><col data-key="ref_link"><col data-key="note"><col data-key="act"><col data-key="automation">
@@ -140,25 +140,24 @@
               <th colspan="2" class="grp">상품명</th>
               <th rowspan="2" class="c-model k-model" data-col="5">모델명<i class="col-resizer"></i></th>
               <th rowspan="2" class="c-content k-content" data-col="6">내용<i class="col-resizer"></i></th>
-              <th rowspan="2" class="c-imguse k-image_usage" data-col="7">이미지 사용 여부<i class="col-resizer"></i></th>
               <th colspan="3" class="grp">등록 필요</th>
               <th colspan="4" class="grp">가격</th>
-              <th rowspan="2" class="c-image k-image" data-col="15">이미지<i class="col-resizer"></i></th>
-              <th rowspan="2" class="c-link k-ref_link" data-col="16">참고 링크<i class="col-resizer"></i></th>
-              <th rowspan="2" class="c-note k-note" data-col="17">비고<i class="col-resizer"></i></th>
-              <th rowspan="2" class="c-act only-editor-cell" data-col="18">관리</th>
-              <th rowspan="2" class="k-automation" data-col="19">자동화 정보<i class="col-resizer"></i></th>
+              <th rowspan="2" class="c-image k-image" data-col="14">이미지<i class="col-resizer"></i></th>
+              <th rowspan="2" class="c-link k-ref_link" data-col="15">참고 링크<i class="col-resizer"></i></th>
+              <th rowspan="2" class="c-note k-note" data-col="16">비고<i class="col-resizer"></i></th>
+              <th rowspan="2" class="c-act only-editor-cell" data-col="17">관리</th>
+              <th rowspan="2" class="k-automation" data-col="18">자동화 정보<i class="col-resizer"></i></th>
             </tr>
             <tr>
               <th class="sub c-name k-name_own" data-col="3">자사몰<i class="col-resizer"></i></th>
               <th class="sub c-name k-name_naver" data-col="4">네이버<i class="col-resizer"></i></th>
-              <th class="sub c-need k-need_retail" data-col="8"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_retail" title="소매몰 등록 필요 일괄 체크/해제"><span>소매몰</span></span><i class="col-resizer"></i></th>
-              <th class="sub c-need k-need_wholesale" data-col="9"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_wholesale" title="도매몰 등록 필요 일괄 체크/해제"><span>도매몰</span></span><i class="col-resizer"></i></th>
-              <th class="sub c-need k-need_naver" data-col="10"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_naver" title="네이버 등록 필요 일괄 체크/해제"><span>네이버</span></span><i class="col-resizer"></i></th>
-              <th class="sub c-price k-price_retail" data-col="11">소매몰<i class="col-resizer"></i></th>
-              <th class="sub c-price grade k-price_wholesale" data-col="12">도매몰<small>베이직</small><i class="col-resizer"></i></th>
-              <th class="sub c-price grade k-price_wholesale_master" data-col="13">도매몰<small>마스터</small><i class="col-resizer"></i></th>
-              <th class="sub c-price k-price_naver" data-col="14"><span class="th-chk"><input type="checkbox" class="chk-link-all only-editor" title="네이버 가격을 소매몰과 동일하게 일괄 설정/해제"><span>네이버</span></span><i class="col-resizer"></i></th>
+              <th class="sub c-need k-need_retail" data-col="7"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_retail" title="소매몰 등록 필요 일괄 체크/해제"><span>소매몰</span></span><i class="col-resizer"></i></th>
+              <th class="sub c-need k-need_wholesale" data-col="8"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_wholesale" title="도매몰 등록 필요 일괄 체크/해제"><span>도매몰</span></span><i class="col-resizer"></i></th>
+              <th class="sub c-need k-need_naver" data-col="9"><span class="th-chk"><input type="checkbox" class="chk-need-all only-editor" data-field="need_naver" title="네이버 등록 필요 일괄 체크/해제"><span>네이버</span></span><i class="col-resizer"></i></th>
+              <th class="sub c-price k-price_retail" data-col="10">소매몰<i class="col-resizer"></i></th>
+              <th class="sub c-price grade k-price_wholesale" data-col="11">도매몰<small>베이직</small><i class="col-resizer"></i></th>
+              <th class="sub c-price grade k-price_wholesale_master" data-col="12">도매몰<small>마스터</small><i class="col-resizer"></i></th>
+              <th class="sub c-price k-price_naver" data-col="13"><span class="th-chk"><input type="checkbox" class="chk-link-all only-editor" title="네이버 가격을 소매몰과 동일하게 일괄 설정/해제"><span>네이버</span></span><i class="col-resizer"></i></th>
             </tr>
           </thead>
           <tbody id="gridBody"></tbody>
