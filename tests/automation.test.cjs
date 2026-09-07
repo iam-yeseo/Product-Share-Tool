@@ -77,3 +77,9 @@ test('a delayed list response cannot overwrite the currently selected list',asyn
  waiting.get('old')({id:'old'});await first;
  assert.equal(context.State.currentListId,'new');assert.equal(context.State.items[0].id,'item-new');assert.equal(context.State.loading,false);
 });
+test('origin is trimmed on normalize and included in the export payload',()=>{
+ assert.equal(C.normalize({origin:'  Made in China '}).origin,'Made in China');
+ assert.equal(C.normalize({origin:42}).origin,'');
+ const row={id:'o',name_own:'상품',need_retail:'필요',need_wholesale:'불필요',automation:{categoryCodes:{retail:'020001',wholesale:''},detailImages:[],origin:'Made in Korea'}};
+ assert.equal(C.exportItem(row,settings).origin,'Made in Korea');
+});

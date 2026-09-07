@@ -14,7 +14,8 @@ var State = {
   selected: {},          // 편집자 뷰에서 체크한 행 (id -> true) — 등록 완료 상태와 무관
   dirty: false,
   remoteChanged: false,  // 편집 중 다른 사람이 서버 데이터를 바꿨는지
-  hiddenCols: []         // 보기 뷰에서 숨길 열 key 목록 (전역 공유)
+  hiddenCols: [],        // 보기 뷰에서 숨길 열 key 목록 (전역 공유)
+  registrations: {}      // item id -> { retail: {...}, wholesale: {...} } 몰별 등록 상태
 };
 
 /* 숨기거나 다시 표시할 수 있는 열 (체크·순번·관리 열은 제외) */

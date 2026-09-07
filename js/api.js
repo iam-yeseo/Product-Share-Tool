@@ -46,6 +46,22 @@ var Api = (function () {
     );
   }
 
+  /* 몰별 등록 상태 (자동화 프로그램이 기록). 실패해도 목록 표시는 막지 않도록 호출부에서 처리 */
+  async function fetchRegistrations(listId) {
+    var rows = check(
+      await supabaseClient
+        .from("product_registrations")
+        .select("item_id,channel,status,goods_no,error_message,warnings,attempted_at,product_items!inner(list_id)")
+        .eq("product_items.list_id", listId)
+    );
+    var map = {};
+    rows.forEach(function (r) {
+      if (!map[r.item_id]) map[r.item_id] = {};
+      map[r.item_id][r.channel] = r;
+    });
+    return map;
+  }
+
   async function fetchItems(listId) {
     return check(
       await supabaseClient
@@ -153,6 +169,7 @@ var Api = (function () {
     fetchLists: fetchLists,
     fetchList: fetchList,
     fetchItems: fetchItems,
+    fetchRegistrations: fetchRegistrations,
     createList: createList,
     deleteList: deleteList,
     saveDraft: saveDraft,

@@ -18,7 +18,13 @@ async function loadList(id) {
   var revision = ++listLoadRevision;
   State.loading = true; State.loadError = false; AutomationEditor.publish();
   try {
-    var result = await Promise.all([Api.fetchList(id), Api.fetchItems(id)]);
+    var result = await Promise.all([
+      Api.fetchList(id),
+      Api.fetchItems(id),
+      typeof Api.fetchRegistrations === "function"
+        ? Api.fetchRegistrations(id).catch(function (e) { console.warn("등록 상태 조회 실패", e); return {}; })
+        : Promise.resolve({})
+    ]);
     if (revision !== listLoadRevision) return;
     var list = result[0];
     if (!list) {
@@ -33,6 +39,7 @@ async function loadList(id) {
     updatePageLinks();
     State.list = list;
     State.items = result[1];
+    State.registrations = result[2] || {};
     State.items.forEach(function (it) { it.automation = AutomationCore.normalize(it.automation); it.automation.detailImages.forEach(function (img) { if (!img.id) img.id = uuid(); }); });
     State.baseItemIds = {};
     State.items.forEach(function (it) { State.baseItemIds[it.id] = true; });

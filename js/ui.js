@@ -152,6 +152,26 @@ var UI = (function () {
     return '<span class="tag tag-' + kind + '">' + esc(val) + "</span>";
   }
 
+  /* ---------- 몰별 등록 상태 뱃지 (자동화 프로그램이 기록) ---------- */
+  var REG_LABEL = { pending: "대기", running: "진행중", success: "완료", failed: "실패" };
+  function regBadges(it) {
+    var regs = (State.registrations && State.registrations[it.id]) || {};
+    var html = [["retail", "소매"], ["wholesale", "도매"]].map(function (ch) {
+      var need = it[ch[0] === "retail" ? "need_retail" : "need_wholesale"] === "필요";
+      var r = regs[ch[0]];
+      if (!need && !r) return "";
+      var st = r ? r.status : "pending";
+      var tip = [];
+      if (r && r.goods_no) tip.push("상품번호 " + r.goods_no);
+      if (r && r.error_message) tip.push("사유: " + r.error_message);
+      if (r && Array.isArray(r.warnings) && r.warnings.length) tip.push("경고: " + r.warnings.join(" / "));
+      if (r && r.attempted_at) tip.push(typeof fmtDateTime === "function" ? fmtDateTime(r.attempted_at) : r.attempted_at);
+      return '<span class="reg-badge reg-' + st + '" title="' + esc(tip.join("\n")) + '">' +
+        ch[1] + " " + (REG_LABEL[st] || st) + (r && r.goods_no ? " #" + esc(r.goods_no) : "") + "</span>";
+    }).join("");
+    return html ? '<div class="reg-status">' + html + "</div>" : "";
+  }
+
   /* ---------- 행 ---------- */
   function renderRow(it, idx) {
     var editor = State.view === "editor";
@@ -271,7 +291,7 @@ var UI = (function () {
     c.push('<td class="c-act only-editor-cell">' +
       (editor ? '<button class="mini-btn danger" data-act="del" title="행 삭제">삭제</button>' : "") + "</td>");
 
-    c.push('<td class="k-automation">' + AutomationEditor.summary(it) + '</td>');
+    c.push('<td class="k-automation">' + AutomationEditor.summary(it) + regBadges(it) + '</td>');
     return '<tr class="' + cls + '" data-id="' + esc(it.id) + '">' + c.join("") + "</tr>";
   }
 
