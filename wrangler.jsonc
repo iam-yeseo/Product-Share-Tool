@@ -1,0 +1,15 @@
+{
+  // Cloudflare Workers(Workers Builds · Git 연동) 배포 설정.
+  // 이 저장소는 서버 코드 없이 정적 파일만 제공하므로 Worker 스크립트(main) 없이 assets만 사용합니다.
+  // 이 파일이 없으면 Wrangler가 배포 대상을 찾지 못해 "Missing entry-point" 오류로 배포가 실패합니다.
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "product-upload",
+  "compatibility_date": "2026-09-01",
+  "assets": {
+    // 저장소 루트를 그대로 제공합니다. 제외할 파일은 .assetsignore 에 있습니다.
+    "directory": "./",
+    // /edit → /edit/ 로 정리하고 edit/index.html 을 제공합니다.
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  }
+}
