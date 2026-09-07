@@ -74,26 +74,7 @@ var Api = (function () {
   /* 편집자 저장 — 리스트 메타 + 행 전체를 한 번에 반영합니다.
      done / done_at 은 payload 에서 제외합니다. (등록자가 체크한 상태를 덮어쓰지 않기 위함) */
   async function saveDraft(list, items, removedIds) {
-    check(
-      await supabaseClient
-        .from("product_lists")
-        .update({
-          title: list.title || "제목 없는 리스트",
-          author: list.author || "",
-          work_date: list.work_date || null,
-          updated_at: new Date().toISOString()   // 최종 편집 일시
-        })
-        .eq("id", list.id)
-    );
-
-    if (removedIds.length) {
-      check(
-        await supabaseClient.from("product_items").delete().in("id", removedIds)
-      );
-    }
-
-    if (items.length) {
-      var payload = items.map(function (it, i) {
+    var payload = items.map(function (it, i) {
         return {
           id: it.id,
           list_id: list.id,
@@ -113,11 +94,11 @@ var Api = (function () {
           price_naver: it.price_naver,
           image_url: it.image_url || "",
           ref_link: it.ref_link || "",
-          note: it.note || ""
+          note: it.note || "",
+          automation: Object.assign(AutomationCore.normalize(it.automation), { detailHtml: AutomationCore.html(AutomationCore.normalize(it.automation).detailImages) })
         };
       });
-      check(await supabaseClient.from("product_items").upsert(payload));
-    }
+    check(await supabaseClient.rpc("save_product_draft", { p_list: list, p_items: payload, p_removed_ids: removedIds }));
   }
 
   /* 등록자 체크 — 즉시 반영 */
@@ -151,7 +132,24 @@ var Api = (function () {
     );
   }
 
+  async function fetchAutomationSettings() {
+    var row = check(await supabaseClient.from("app_settings").select("value,updated_at").eq("key", "product_automation_v1").single());
+    AutomationCore.validateSettings(row.value);
+    return row;
+  }
+
+  async function saveAutomationSettings(value, revision) {
+    AutomationCore.validateSettings(value);
+    var data = check(await supabaseClient.from("app_settings")
+      .update({ value: value, updated_at: new Date().toISOString() })
+      .eq("key", "product_automation_v1").eq("updated_at", revision).select("updated_at").maybeSingle());
+    if (!data) throw new Error("다른 사용자가 설정을 변경했습니다. 새로 불러온 뒤 다시 적용해 주세요.");
+    return data.updated_at;
+  }
+
   return {
+    fetchAutomationSettings: fetchAutomationSettings,
+    saveAutomationSettings: saveAutomationSettings,
     fetchLists: fetchLists,
     fetchList: fetchList,
     fetchItems: fetchItems,
