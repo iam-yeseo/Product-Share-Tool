@@ -91,3 +91,5 @@ Supabase JS는 `2.115.0`으로 고정했고 엑셀 파싱은 SheetJS CDN을 사�
 기존 프로젝트의 로그인 없는 공유 방식을 유지합니다. 프론트엔드에는 publishable key만 사용하며 service role/secret key는 넣지 않습니다. Supabase RLS와 Storage 정책이 데이터 접근을 결정합니다.
 
 정적 호스팅은 루트 `index.html`, `edit/`, `view/`, `settings/`, `js/`, `css/`를 그대로 제공합니다. GitHub Pages의 기존 도메인 설정은 `CNAME`에 유지되어 있습니다. 공통 편집/보기 HTML은 `templates/product-page.html`을 수정한 뒤 `npm run build`로 두 페이지를 함께 생성합니다.
+
+Cloudflare Workers(Workers Builds · Git 연동) 배포 설정은 [wrangler.jsonc](wrangler.jsonc)에 있습니다. Worker 이름은 `product-upload`, 서버 코드 없이 저장소 루트를 정적 자산으로 제공하며, 사이트에 필요 없는 파일(`package.json`, `scripts/`, `tests/`, `docs/`, `supabase/`, `templates/`, `data/` 등)은 [.assetsignore](.assetsignore)로 업로드에서 제외합니다. 이 설정 파일이 없으면 Wrangler가 배포 대상을 찾지 못해 Workers Builds가 `Missing entry-point` 오류로 실패합니다.
