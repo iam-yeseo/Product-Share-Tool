@@ -30,8 +30,8 @@ var UI = (function () {
   }
   function applyColWidths() {
     var cols = document.querySelectorAll("#gridCols col");
-    var total = 0;
     var hidden = State.hiddenCols || [];
+    var entries = [];
     cols.forEach(function (col) {
       var k = col.dataset.key;
       var w = colWidthOf(k);
@@ -40,8 +40,16 @@ var UI = (function () {
       // 보기 뷰에서는 숨긴 열을 접습니다. (편집 뷰에서는 항상 보이며 편집 가능)
       if (State.view === "registrar" && hidden.indexOf(k) > -1) w = 0;
       if (typeof Workspace !== "undefined" && Workspace.compactHidden(k)) w = 0;
-      col.style.width = w + "px";
-      total += w;
+      entries.push({ col: col, key: k, width: w });
+    });
+    var wrap = document.querySelector(".table-wrap");
+    if (typeof Workspace !== "undefined") {
+      entries = Workspace.fitWidths(entries, wrap ? Math.max(0, wrap.clientWidth - 2) : 0);
+    }
+    var total = 0;
+    entries.forEach(function (entry) {
+      entry.col.style.width = entry.width + "px";
+      total += entry.width;
     });
     var grid = document.getElementById("grid");
     if (grid) grid.style.width = total + "px";

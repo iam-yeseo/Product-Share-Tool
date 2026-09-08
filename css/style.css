@@ -276,7 +276,7 @@ body.resizing{cursor:col-resize;user-select:none}
 /* 읽기 전용 셀 + 복사 */
 .ro-cell{display:flex;align-items:center;gap:6px;padding:4px 2px}
 .ro-text{flex:1;min-width:0;word-break:break-all}
-.price-ro{text-align:right;font-variant-numeric:tabular-nums;font-weight:600}
+.price-ro{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
 .ro-empty{color:#c8ccd4;padding-left:4px}
 .copy-btn{
   flex:none;border:1px solid var(--line);background:var(--surface);color:var(--text-mute);

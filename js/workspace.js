@@ -1,17 +1,32 @@
 /* Presentation only: shared rows, persistence and registration data remain authoritative. */
 var Workspace = (function () {
-  var expanded = false, filter = "all", listId = null;
+  var expanded = false, filter = "all", listId = null, tableResizeObserver = null;
   var compactKeys = ['seq','name_naver','model','content','price_wholesale','price_wholesale_master','price_naver','image','ref_link','note','act'];
   function compactHidden(key) { return !expanded && compactKeys.includes(key); }
   function columns() {
     document.querySelectorAll('#gridCols col').forEach(function (col,index) {
-      var hide = compactHidden(col.dataset.key);
+      var hide = compactHidden(col.dataset.key) || (State.view === 'registrar' && col.dataset.key === 'act');
       col.style.display = hide ? 'none' : '';
       document.querySelectorAll('#grid tbody tr[data-id]').forEach(function(row){ if(row.cells[index]) row.cells[index].hidden=hide; });
       var head=document.querySelector('#grid th[data-col="'+index+'"]'); if(head)head.hidden=hide;
     });
+    var grid=document.getElementById('grid');if(grid)grid.classList.toggle('is-expanded',expanded);
     var groups=document.querySelectorAll('#grid thead .grp');
     if(groups.length===3){groups[0].colSpan=expanded?2:1;groups[2].colSpan=expanded?4:1;}
+  }
+  function fitWidths(entries,available) {
+    var fitted=entries.map(function(entry){return {col:entry.col,key:entry.key,width:entry.width};});
+    if(expanded||!available)return fitted;
+    var total=fitted.reduce(function(sum,entry){return sum+entry.width;},0),extra=Math.floor(available-total);
+    if(extra<=0)return fitted;
+    var weights={name_own:3,automation:2,brand:1};
+    var flexible=fitted.filter(function(entry){return entry.width>0&&weights[entry.key];});
+    var weightTotal=flexible.reduce(function(sum,entry){return sum+weights[entry.key];},0),remaining=extra;
+    flexible.forEach(function(entry,index){
+      var add=index===flexible.length-1?remaining:Math.floor(extra*weights[entry.key]/weightTotal);
+      entry.width+=add;remaining-=add;
+    });
+    return fitted;
   }
   function visibleItems() { return State.items.filter(function(it){return filter === "all" || AutomationEditor.readiness(it).key === filter;}); }
   function resetFilter() { filter="all"; }
@@ -84,8 +99,15 @@ var Workspace = (function () {
     if(metadata){var detail=document.createElement('details');detail.className='list-history';detail.innerHTML='<summary>목록 정보</summary>';['listCreated','listUpdated'].forEach(function(id){var el=document.getElementById(id);if(el)detail.appendChild(el.parentElement);});more.appendChild(detail);}
     var toggle=document.getElementById('btnTableDensity');
     toggle.addEventListener('click',function(){expanded=!expanded;toggle.textContent=expanded?'기본 열 보기':'전체 열 보기';toggle.setAttribute('aria-pressed',String(expanded));UI.applyColWidths();});
+    var tableWrap=document.querySelector('.table-wrap');
+    if(tableWrap&&typeof ResizeObserver!=="undefined"){
+      tableResizeObserver=new ResizeObserver(function(){UI.applyColWidths();});
+      tableResizeObserver.observe(tableWrap);
+    }else if(typeof window!=="undefined"){
+      window.addEventListener('resize',function(){UI.applyColWidths();});
+    }
     refresh();
   });
   function width(key,value) {var widths={check:48,brand:190,name_own:220,need_retail:70,need_wholesale:70,need_naver:70,price_retail:110,automation:210};return expanded?value:Math.min(value,widths[key]||value);}
-  return {width:width,visibleItems:visibleItems,filterRows:filterRows,resetFilter:resetFilter,compactHidden:compactHidden,columns:columns,refresh:refresh,fields:fields,editField:editField,selectBrand:selectBrand};
+  return {width:width,fitWidths:fitWidths,visibleItems:visibleItems,filterRows:filterRows,resetFilter:resetFilter,compactHidden:compactHidden,columns:columns,refresh:refresh,fields:fields,editField:editField,selectBrand:selectBrand};
 })();
