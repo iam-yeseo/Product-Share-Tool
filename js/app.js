@@ -107,7 +107,7 @@ async function save() {
     btn.disabled = false;
     return false;
   } finally {
-    btn.textContent = "편집 완료 · 저장";
+    btn.textContent = "저장";
     State.saving = false;
     document.querySelector('.layout').inert = false;
     AutomationEditor.publish();
@@ -163,6 +163,7 @@ function findIndex(id) {
 }
 
 function addRow() {
+  if(typeof Workspace !== "undefined") Workspace.resetFilter();
   State.items.push(makeItem(State.items.length + 1));
   setDirty(true);
   UI.renderGrid();
@@ -374,7 +375,7 @@ function bindEvents() {
   document.getElementById("chkAll").addEventListener("change", function (e) {
     clearSelection();
     if (e.target.checked) {
-      State.items.forEach(function (it) { State.selected[it.id] = true; });
+      (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) { State.selected[it.id] = true; });
     }
     UI.renderGrid();
   });
@@ -386,14 +387,14 @@ function bindEvents() {
     if (e.target.classList.contains("chk-need-all")) {
       var field = e.target.dataset.field;
       var on = e.target.checked;
-      State.items.forEach(function (it) { it[field] = on ? "필요" : "불필요"; });
+      (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) { it[field] = on ? "필요" : "불필요"; });
       setDirty(true);
       UI.renderGrid();
       return;
     }
     if (e.target.classList.contains("chk-link-all")) {
       var link = e.target.checked;
-      State.items.forEach(function (it) {
+      (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) {
         it.link_np = link;
         if (link) it.price_naver = it.price_retail;
       });
