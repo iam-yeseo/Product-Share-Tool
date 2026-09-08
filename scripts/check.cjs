@@ -1,6 +1,7 @@
 const { execFileSync } = require('node:child_process');
 const fs = require('node:fs');
 for (const file of fs.readdirSync('js').filter(f => f.endsWith('.js'))) execFileSync(process.execPath,['--check','js/'+file]);
+execFileSync(process.execPath,['--check','supabase/functions/cleanup-product-thumbnails/cleanup-core.mjs']);
 const core = require('../js/automation-core.js');
 core.validateSettings(JSON.parse(fs.readFileSync('data/automation-settings.json')));
 const generated = fs.readFileSync('js/brand-defaults.js', 'utf8');
