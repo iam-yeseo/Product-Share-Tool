@@ -35,17 +35,17 @@ var UI = (function () {
     cols.forEach(function (col) {
       var k = col.dataset.key;
       var w = colWidthOf(k);
+      if(typeof Workspace !== "undefined") w=Workspace.width(k,w);
       if (k === "act" && State.view !== "editor") w = 0;   // 등록자 뷰에서는 관리 열이 없습니다
       // 보기 뷰에서는 숨긴 열을 접습니다. (편집 뷰에서는 항상 보이며 편집 가능)
       if (State.view === "registrar" && hidden.indexOf(k) > -1) w = 0;
-      if (k === "automation" && State.view === "editor" && State.editMode !== "automation") w = 0;
-      // 기본 편집에서는 이미지(썸네일) 열을 접습니다. 자동화 편집에서 다시 펼쳐집니다.
-      if (k === "image" && State.view === "editor" && State.editMode !== "automation") w = 0;
+      if (typeof Workspace !== "undefined" && Workspace.compactHidden(k)) w = 0;
       col.style.width = w + "px";
       total += w;
     });
     var grid = document.getElementById("grid");
     if (grid) grid.style.width = total + "px";
+    if (typeof Workspace !== "undefined") Workspace.columns();
     document.documentElement.style.setProperty("--seq-left", colWidthOf("check") + "px");
   }
   function setColWidth(key, w) {
@@ -333,22 +333,24 @@ var UI = (function () {
     var copyBtn = document.getElementById("btnCopyRows");
     var delBtn = document.getElementById("btnDeleteRows");
     var all = document.getElementById("chkAll");
+    if (label) label.hidden = n === 0;
     if (label) label.textContent = n ? "선택 " + n + "건" : "행을 체크하면 복사·삭제할 수 있습니다";
-    if (copyBtn) copyBtn.disabled = n === 0;
-    if (delBtn) delBtn.disabled = n === 0;
+    if (copyBtn) { copyBtn.disabled = n === 0; copyBtn.hidden = n === 0; }
+    if (delBtn) { delBtn.disabled = n === 0; delBtn.hidden = n === 0; }
     if (all) {
-      all.checked = n > 0 && n === State.items.length;
-      all.indeterminate = n > 0 && n < State.items.length;
+      all.checked = n > 0 && n === (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).length;
+      all.indeterminate = n > 0 && n < (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).length;
     }
   }
 
   /* 머리글의 일괄 체크박스 상태(전체/부분/없음)를 행 상태에 맞춰 갱신 */
   function renderHeaderChecks() {
-    var total = State.items.length;
+    var items = typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items;
+    var total = items.length;
     function set(sel, isOn) {
       var el = document.querySelector(sel);
       if (!el) return;
-      var n = State.items.filter(isOn).length;
+      var n = items.filter(isOn).length;
       el.checked = total > 0 && n === total;
       el.indeterminate = n > 0 && n < total;
     }
@@ -364,7 +366,7 @@ var UI = (function () {
       var colspan = 19;
       body.innerHTML = '<tr class="row-empty"><td colspan="' + colspan + '">' +
         (State.view === "editor"
-          ? "아래 <b>+ 행 추가</b> 버튼으로 상품을 추가하세요."
+          ? "상단 <b>+ 상품 추가</b> 버튼으로 상품을 추가하세요."
           : "등록된 상품이 없습니다.") + "</td></tr>";
       renderToolbar();
       renderHeaderChecks();
@@ -372,6 +374,7 @@ var UI = (function () {
       return;
     }
     body.innerHTML = State.items.map(renderRow).join("");
+    if(typeof Workspace !== "undefined") Workspace.filterRows();
     renderToolbar();
     renderHeaderChecks();
     AutomationEditor.publish();

@@ -9,28 +9,31 @@ var AutomationEditor = (function () {
   function thumbUrl(it) { return pending.has(it.id) ? pending.get(it.id).preview : safeUrl(it.image_url); }
   function thumbnailCell(it) {
     var url = thumbUrl(it);
-    return '<button class="thumb-button" data-auto-open="' + esc(it.id) + '" title="썸네일 및 자동화 정보">' +
+    return '<button class="thumb-button" data-auto-open="' + esc(it.id) + '" title="상품 상세 정보">' +
       (url ? '<img src="' + esc(url) + '" alt="상품 썸네일" loading="lazy">' : (State.view === 'editor' ? '+ 이미지' : '이미지 없음')) + '</button>';
   }
   function summary(it) {
-    var a = AutomationCore.normalize(it.automation);
-    var lines = ['retail','wholesale'].map(function (store) {
-      var code = a.categoryCodes[store];
-      var label = AutomationCore.path(getSettings().categories[store], code);
-      return '<span><span class="category-path" title="' + esc(label) + '">' + (store === 'retail' ? '소매 ' : '도매 ') + esc(label || '카테고리 미선택') + '</span><code data-field="category-' + store + '">' + esc(code || '미선택') + '</code></span>';
-    }).join('');
-    return '<button class="automation-summary" data-auto-open="' + esc(it.id) + '">' + lines + (a.origin ? '<span>원산지 ' + esc(a.origin) + '</span>' : '') + '<span>상세 이미지 ' + a.detailImages.length + '장 · 열기</span></button>';
+    var state = readiness(it);
+    return '<button class="automation-summary" data-auto-open="' + esc(it.id) + '"><strong class="ready-label ready-' + state.key + '">' + esc(state.label) + '</strong><span>' + esc(state.issues[0] || '상품 상세 정보 열기 →') + '</span></button>';
   }
   function getSettings() { return settings || { categories: { retail: [], wholesale: [] }, folders: [], brands: [] }; }
   function brands() { return getSettings().brands || []; }
   /* 설정(브랜드·카테고리)이 바뀌었을 때 다시 읽습니다. 화면 갱신은 호출부가 결정합니다. */
   async function reloadSettings() { settings = (await Api.fetchAutomationSettings()).value; return settings; }
+  function readiness(it) {
+    if (!settings) return {key:'loading',label:'설정 확인 중',issues:[]};
+    var issues = AutomationCore.readyIssues(it,getSettings());
+    var missing = issues.filter(function (issue) { return !/이미지 정상 확인 필요/.test(issue); });
+    return {key:missing.length?'missing':issues.length?'images':'ready',label:missing.length?'정보 부족':issues.length?'이미지 확인 필요':'등록 준비 완료',issues:issues};
+  }
+
   function publish() {
     var target = document.getElementById('automation-data');
     var ready = !!(settings && State.currentListId && !State.loading && !State.loadError);
     document.documentElement.dataset.automationReady = String(ready);
     if (target) target.textContent = JSON.stringify({ schemaVersion: 1, ready: ready, listId: State.currentListId, saved: !State.dirty && !State.saving,
       items: State.items.map(function (it) { return AutomationCore.exportItem(it, getSettings()); }) });
+    if (typeof Workspace !== 'undefined') Workspace.refresh();
     var selector = document.getElementById('autoItemSelect');
     if (selector) {
       var before = selector.value;
@@ -64,10 +67,11 @@ var AutomationEditor = (function () {
     }).join('');
     var url = thumbUrl(it);
     document.getElementById('autoBody').innerHTML =
+      (typeof Workspace !== 'undefined' ? Workspace.fields(it,ro) : '') +
       '<section class="auto-section"><h3>카테고리</h3><div class="field-grid">' + cats + '</div></section>' +
       '<section class="auto-section"><h3>기본 정보</h3><div class="field-grid"><label class="field">원산지<input data-basic="origin" value="' + esc(a.origin) + '" placeholder="예: Made in China" maxlength="30"' + (ro ? ' readonly' : '') + '><span class="field-note">고도몰 원산지 칸에 그대로 입력됩니다. 제조사는 브랜드와 동일하게 처리됩니다.</span></label></div></section>' +
       '<section class="auto-section"><h3>상품 썸네일</h3><div class="thumbnail-editor">' + (url ? '<a href="' + esc(url) + '" target="_blank" rel="noopener"><img src="' + esc(url) + '" alt="등록할 썸네일"></a>' : '<div class="thumbnail-empty">썸네일 없음</div>') +
-      '<div>' + (!ro ? '<label class="btn file-label">이미지 선택<input id="thumbnailFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label> <button class="btn btn-ghost" data-action="remove-thumb">제거</button><p class="field-note">JPG · PNG · WEBP · GIF, 최대 6MB<br>편집 완료 · 저장 시 업로드됩니다.</p>' : '') +
+      '<div>' + (!ro ? '<label class="btn file-label">이미지 선택<input id="thumbnailFile" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label> <button class="btn btn-ghost" data-action="remove-thumb">제거</button><p class="field-note">JPG · PNG · WEBP · GIF, 최대 6MB<br>저장 시 업로드됩니다.</p>' : '') +
       '<p class="field-note">' + esc(pending.has(it.id) ? pending.get(it.id).file.name + ' · 저장 대기' : (a.thumbnail && a.thumbnail.originalName) || '') + '</p>' + (it.image_url && !pending.has(it.id) ? '<button class="btn btn-ghost" data-action="copy-thumb">썸네일 주소 복사</button>' : '') + '</div></div></section>' +
       (!ro ? '<section class="auto-section"><h3>상세 이미지 주소 만들기</h3><p class="field-note">영문 소문자로 생성합니다. 제품명 내부 대시와 공백은 제거됩니다.</p><div class="field-grid generator-grid">' +
       '<label class="field">이미지 폴더<select data-generator="folder">' + folders(a.generator.folder) + '</select></label>' +
@@ -76,7 +80,7 @@ var AutomationEditor = (function () {
       '<label class="field">확장자<select data-generator="extension">' + AutomationCore.EXTENSIONS.map(function (ext) { return '<option' + (ext === a.generator.extension ? ' selected' : '') + '>' + ext + '</option>'; }).join('') + '</select></label>' +
       '<label class="field">이미지 수<input type="number" min="1" max="50" data-generator="count" value="' + esc(a.generator.count) + '"></label></div><div class="action-row"><button class="btn btn-primary" data-action="generate">주소 생성 · 목록에 추가</button><button class="btn" data-action="add-image">+ 이미지 직접 추가</button></div></section>' : '') +
       '<section class="auto-section"><div class="section-title"><h3>상세 이미지 <span id="detailCount"></span></h3><button class="btn" data-action="check-all">전체 검사</button></div><p class="field-note">정상 여부는 이 브라우저에서 실제 이미지를 불러와 확인합니다. 내용이 해당 상품과 맞는지는 미리보기로 확인하세요.</p><div id="detailImageRows"></div></section>' +
-      '<section class="auto-section"><div class="section-title"><h3>상세페이지 HTML</h3><button class="btn" data-action="copy-html">HTML 복사</button></div><textarea id="detailHtml" data-field="detail-html" readonly rows="7" spellcheck="false" aria-label="상세페이지 HTML"></textarea><div class="action-row"><button class="btn" data-action="copy-urls">주소 전체 복사</button><button class="btn" data-action="copy-json">상품 JSON 복사</button></div><p id="autoIssues" class="field-note"></p></section>';
+      '<details class="auto-section advanced-output"><summary>내보내기 · HTML과 이미지 주소</summary><div class="section-title"><h3>상세페이지 HTML</h3><button class="btn" data-action="copy-html">HTML 복사</button></div><textarea id="detailHtml" data-field="detail-html" readonly rows="7" spellcheck="false" aria-label="상세페이지 HTML"></textarea><div class="action-row"><button class="btn" data-action="copy-urls">주소 전체 복사</button><button class="btn" data-action="copy-json">상품 JSON 복사</button></div><p id="autoIssues" class="field-note"></p></details>';
     renderImages();
   }
   function renderImages() {
@@ -121,7 +125,7 @@ var AutomationEditor = (function () {
     lastFocus = document.activeElement;
     render(); document.getElementById('automationDialog').showModal();
   }
-  function close() { document.getElementById('automationDialog').close(); activeId = null; UI.renderGrid(); if (lastFocus && lastFocus.isConnected) lastFocus.focus(); }
+  function close() { document.getElementById('automationDialog').close(); activeId = null; UI.renderGrid(); if (lastFocus && lastFocus.isConnected) lastFocus.focus(); else { var fallback=document.querySelector('.automation-summary') || document.getElementById('btnTableDensity'); if(fallback)fallback.focus(); } }
   async function checkImage(it, img) {
     var url = AutomationCore.imageUrl(img); if (!url || checking.has(img.id)) return;
     checking.add(img.id); if (current() === it) updateOutputs();
@@ -157,24 +161,23 @@ var AutomationEditor = (function () {
   function download() {
     var result = JSON.parse(document.getElementById('automation-data').textContent);
     if (!result.ready) { toast("상품 데이터가 준비된 뒤 다시 시도해 주세요.", "warn"); return; }
-    if (State.dirty) { toast('편집 완료 · 저장 후 내보내 주세요.', 'warn'); return; }
+    if (State.dirty) { toast('저장 후 내보내 주세요.', 'warn'); return; }
     if (result.items.some(function (it) { return it.issues.length; }) && !confirm('자동화 확인 항목이 남아 있습니다. 확인 항목을 포함하여 JSON을 내보낼까요?')) return;
     var blob = new Blob([JSON.stringify(result,null,2)],{type:'application/json'}), url=URL.createObjectURL(blob), a=document.createElement('a');
     a.href=url; a.download='상품-자동화-'+(State.currentListId || '목록')+'.json'; a.click(); setTimeout(function(){URL.revokeObjectURL(url);},1000);
   }
   function bind() {
-    State.editMode = 'basic';
-    document.querySelectorAll('[data-edit-mode]').forEach(function (button) { button.addEventListener('click',function(){ State.editMode=button.dataset.editMode; document.body.classList.toggle('automation-mode',State.editMode==='automation'); document.querySelectorAll('[data-edit-mode]').forEach(function(b){b.classList.toggle('is-active',b===button);b.setAttribute('aria-pressed',String(b===button));}); UI.applyColWidths(); }); });
-    document.getElementById('btnOpenAutomation').addEventListener('click',function(){open(document.getElementById('autoItemSelect').value);});
+
     document.getElementById('btnExportAutomation').addEventListener('click',download);
     document.getElementById('btnValidateList').addEventListener('click',async function(){this.disabled=true; await checkAll(State.items); this.disabled=false; toast('이미지 검사가 끝났습니다. 상품별 결과를 확인하세요.');});
     document.getElementById('gridBody').addEventListener('click',function(e){var b=e.target.closest('[data-auto-open]');if(b)open(b.dataset.autoOpen);});
     document.getElementById('autoClose').addEventListener('click',close);
-    document.getElementById('autoSave').addEventListener('click',async function(){close();await save();});
+    document.getElementById('autoSave').addEventListener('click',function(){close();});
     var dialog=document.getElementById('automationDialog');
     dialog.addEventListener('cancel',function(e){e.preventDefault();close();});
     dialog.addEventListener('input',function(e){
       var it=current();if(!it || State.view!=='editor')return;
+      if(e.target.dataset.productField && typeof Workspace !== 'undefined'){Workspace.editField(it,e.target);touch();return;}
       if(e.target.dataset.categorySearch){var store=e.target.dataset.categorySearch;document.getElementById('category-'+store).innerHTML=categoryOptions(store,it.automation.categoryCodes[store],e.target.value);return;}
       if(e.target.dataset.generator){it.automation.generator[e.target.dataset.generator]=e.target.value;touch();}
       if(e.target.dataset.basic){it.automation[e.target.dataset.basic]=e.target.value;touch();}
@@ -241,5 +244,5 @@ var AutomationEditor = (function () {
   }
   async function init() { bind(); try { settings=(await Api.fetchAutomationSettings()).value; } catch(e){toast('자동화 설정 불러오기 실패: '+e.message,'error');} }
   function afterLoad() { var dialog = document.getElementById("automationDialog"); if (dialog.open) { if (current()) render(); else close(); } }
-  return { afterLoad:afterLoad, brands:brands, reloadSettings:reloadSettings, isChecking:function(){return checking.size>0 || thumbnailChecks.size>0;}, init:init, open:open, publish:publish, thumbnailCell:thumbnailCell, summary:summary, clearPending:clearPending, copyPending:copyPending, uploadPending:uploadPending };
+  return { readiness:readiness, afterLoad:afterLoad, brands:brands, reloadSettings:reloadSettings, isChecking:function(){return checking.size>0 || thumbnailChecks.size>0;}, init:init, open:open, publish:publish, thumbnailCell:thumbnailCell, summary:summary, clearPending:clearPending, copyPending:copyPending, uploadPending:uploadPending };
 })();

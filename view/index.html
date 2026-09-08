@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>보기 · 상품 등록 요청 툴</title>
+<title>등록 현황 · 상품 등록 요청 툴</title>
 <link rel="stylesheet" href="../css/style.css">
 <link rel="stylesheet" href="../css/automation.css">
 </head>
@@ -18,8 +18,8 @@
 
   <div class="gnb-center">
     <nav class="view-switch" aria-label="페이지">
-      <a class="vs-btn" data-route="edit" href="../edit/">편집</a>
-      <a class="vs-btn" data-route="view" href="../view/">보기</a>
+      <a class="vs-btn" data-route="edit" href="../edit/">상품 작성</a>
+      <a class="vs-btn" data-route="view" href="../view/">등록 현황</a>
       <a class="vs-btn" data-route="settings" href="../settings/">설정</a>
     </nav>
   </div>
@@ -27,7 +27,7 @@
   <div class="gnb-right">
     <span id="syncState" class="sync-state" title="온라인 동기화 상태">연결 중…</span>
     <span id="dirtyBadge" class="dirty-badge" hidden>저장 안 됨</span>
-    <button id="btnSave" class="btn btn-primary only-editor" disabled>편집 완료 · 저장</button>
+    <button id="btnSave" class="btn btn-primary only-editor" disabled>저장</button>
   </div>
 </header>
 
@@ -91,9 +91,9 @@
 
       <!-- 행 편집 툴바 (작성일 박스 아래) -->
       <div class="table-tools only-editor">
-        <button id="btnAddRow" class="btn btn-ghost">+ 행 추가</button>
-        <button id="btnCopyRows" class="btn btn-ghost" disabled>행 복사</button>
-        <button id="btnDeleteRows" class="btn btn-ghost btn-danger-line" disabled>행 삭제</button>
+        <button id="btnAddRow" class="btn btn-ghost">+ 상품 추가</button>
+        <button id="btnCopyRows" class="btn btn-ghost" disabled>복사</button>
+        <button id="btnDeleteRows" class="btn btn-ghost btn-danger-line" disabled>삭제</button>
         <span class="foot-div"></span>
         <button id="btnImport" class="btn btn-ghost">엑셀 불러오기</button>
         <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
@@ -103,20 +103,16 @@
           <div id="colSettingsPanel" class="col-panel" hidden></div>
         </div>
         <span id="selCount" class="sel-count">행을 체크하면 복사·삭제할 수 있습니다</span>
-        <span class="foot-hint">저장을 눌러야 다른 사람에게 반영됩니다. 썸네일은 <b>자동화 편집</b>에서 넣습니다.</span>
+        <span class="foot-hint">저장을 눌러야 다른 사람에게 반영됩니다.</span>
       </div>
 
-      <div class="automation-toolbar">
-        <div class="mode-switch only-editor" aria-label="편집 방식">
-          <button class="btn is-active" data-edit-mode="basic" aria-pressed="true">기본 편집</button>
-          <button class="btn" data-edit-mode="automation" aria-pressed="false">자동화 편집</button>
-        </div>
-        <div class="automation-controls">
-          <select id="autoItemSelect" aria-label="자동화 정보를 볼 상품"></select>
-          <button class="btn btn-primary" id="btnOpenAutomation">상품 자동화 정보</button>
+      <div class="workspace-toolbar">
+        <div id="readinessFilters" class="readiness-filters" aria-label="상품 준비 상태"></div>
+        <button id="btnTableDensity" class="btn" aria-pressed="false">전체 열 보기</button>
+        <details class="workspace-more"><summary class="btn">더보기 ⋯</summary><div id="workspaceMoreItems" class="workspace-more-items">
           <button class="btn" id="btnValidateList">목록 이미지 검사</button>
           <button class="btn" id="btnExportAutomation">JSON 내보내기</button>
-        </div>
+        </div></details>
       </div>
       <!-- 테이블 -->
       <div class="table-wrap">
@@ -146,7 +142,7 @@
               <th rowspan="2" class="c-link k-ref_link" data-col="15">참고 링크<i class="col-resizer"></i></th>
               <th rowspan="2" class="c-note k-note" data-col="16">비고<i class="col-resizer"></i></th>
               <th rowspan="2" class="c-act only-editor-cell" data-col="17">관리</th>
-              <th rowspan="2" class="k-automation" data-col="18">자동화 정보<i class="col-resizer"></i></th>
+              <th rowspan="2" class="k-automation" data-col="18">준비 상태<i class="col-resizer"></i></th>
             </tr>
             <tr>
               <th class="sub c-name k-name_own" data-col="3">자사몰<i class="col-resizer"></i></th>
@@ -177,7 +173,7 @@
       <label><input type="radio" name="imMode" value="replace" checked> 지금 표를 <b>지우고</b> 새로 채우기</label>
       <label><input type="radio" name="imMode" value="append"> 지금 표 <b>아래에 이어</b> 붙이기</label>
     </div>
-    <p class="modal-hint">불러온 뒤 <b>편집 완료 · 저장</b>을 눌러야 실제로 저장됩니다.</p>
+    <p class="modal-hint">불러온 뒤 <b>저장</b>을 눌러야 실제로 저장됩니다.</p>
     <div class="modal-foot">
       <button id="imCancel" class="btn">취소</button>
       <button id="imApply" class="btn btn-primary">불러오기</button>
@@ -199,9 +195,9 @@
 </div>
 
 <dialog id="automationDialog" class="automation-dialog" aria-labelledby="autoTitle">
-  <header class="drawer-head"><h2 id="autoTitle">상품 자동화 정보</h2><button id="autoClose" class="icon-btn" aria-label="자동화 정보 닫기">×</button></header>
+  <header class="drawer-head"><h2 id="autoTitle">상품 상세 정보</h2><button id="autoClose" class="icon-btn" aria-label="상품 상세 정보 닫기">×</button></header>
   <div id="autoBody"></div>
-  <footer class="drawer-foot"><span class="only-editor">설정은 현재 상품의 편집 내용에 반영됩니다.</span><button id="autoSave" class="btn btn-primary only-editor">편집 완료 · 저장</button></footer>
+  <footer class="drawer-foot"><span class="only-editor">변경 내용은 목록에 반영됩니다. 상단 저장을 눌러 공유하세요.</span><button id="autoSave" class="btn btn-primary only-editor">목록에 반영</button></footer>
 </dialog>
 <script type="application/json" id="automation-data">{"schemaVersion":1,"items":[]}</script>
 <div id="toast" class="toast" hidden></div>
@@ -219,5 +215,6 @@
 <script src="../js/automation-editor.js"></script>
 <script src="../js/ui.js"></script>
 <script src="../js/app.js"></script>
+<script src="../js/workspace.js"></script>
 </body>
 </html>
