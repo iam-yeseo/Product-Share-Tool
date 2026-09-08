@@ -91,7 +91,7 @@ var AutomationCore = (function () {
   }
   function exportItem(item, settings) {
     var a = normalize(item.automation), brand = matchBrand(settings.brands, item.brand);
-    return Object.assign({}, item, { automation: undefined, brand_custom: undefined, link_np: undefined, categoryCodes: a.categoryCodes, origin: a.origin,
+    return Object.assign({}, item, { automation: undefined, brand_custom: undefined, link_np: undefined, content: undefined, categoryCodes: a.categoryCodes, origin: a.origin,
       brandCode: brand ? brand.code : '', brandRegistered: !!brand,
       categoryPaths: { retail: path(settings.categories.retail, a.categoryCodes.retail), wholesale: path(settings.categories.wholesale, a.categoryCodes.wholesale) },
       thumbnail: Object.assign({}, a.thumbnail, { url: item.image_url || '' }),

@@ -42,6 +42,7 @@ for (const item of payload.items) {
       "need_retail": "필요",
       "need_wholesale": "필요",
       "need_naver": "필요",
+      "price_retail_regular": 500000,
       "price_retail": 466000,
       "price_wholesale": null,
       "price_wholesale_master": null,
@@ -85,7 +86,7 @@ for (const item of payload.items) {
 }
 ```
 
-예제 URL과 검사 크기는 형식 설명용입니다. 기존 상품의 `content`, `image_url`, `ref_link`, `note`, 생성/수정 시각 등도 함께 전달되며 추가 필드는 무시할 수 있게 처리하세요. `image_usage`는 더 이상 화면에서 입력하지 않지만 기존 값이 남아 있을 수 있습니다.
+예제 URL과 검사 크기는 형식 설명용입니다. `price_retail_regular`은 소매몰 정가, `price_retail`은 소매몰 판매가이자 도매몰 정가입니다. 기존 상품의 `image_url`, `ref_link`, `note`, 생성/수정 시각 등도 함께 전달되며 추가 필드는 무시할 수 있게 처리하세요. `content`와 `image_usage`는 더 이상 화면·엑셀 가져오기·내보내기에서 사용하지 않지만 DB에는 기존 값 보존을 위해 열이 남아 있습니다.
 
 `brand`는 언제나 문자열입니다. `brandRegistered=true`이면 설정의 브랜드 목록(`app_settings.product_automation_v1.brands`)과 대소문자·공백·기호를 무시하고 일치하는 항목이 있다는 뜻이며, `brandCode`에 그 항목의 고도몰 브랜드 코드(비어 있을 수 있음)가 들어갑니다. `brandRegistered=false`는 편집 페이지에서 직접 입력한 브랜드이므로 등록 프로그램에서 브랜드 매칭 경고로 다루세요. 가격 `null`을 임의로 0원으로 바꾸지 마세요. 카테고리 코드는 항상 문자열이며, 화면 경로는 표시용입니다. 저장된 코드가 설정에서 사라지면 경로가 비어 있고 확인 항목에 표시됩니다. 상품과 이미지의 순서는 각각 `seq`, `order`를 사용합니다.
 

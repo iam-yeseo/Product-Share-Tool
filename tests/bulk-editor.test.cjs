@@ -7,9 +7,9 @@ function load(){
 }
 
 test('bulk changes only enabled settings and preserve completion and product-specific data',()=>{
- const bulk=load(),items=[{id:'1',brand:'Old',name_own:'Product A',model:'A',done:true,done_at:'saved',price_retail:100,price_naver:100,link_np:true,automation:{categoryCodes:{retail:'001',wholesale:'002'},detailImages:[{id:'img',folder:'old',filename:'a.jpg'}],thumbnail:{path:'keep'}}},{id:'2',brand:'Old 2',name_own:'Product B',model:'B',done:false,price_retail:200,price_naver:50,link_np:false,automation:{detailImages:[]}}];
- bulk.applyChanges(items,{content:'기존 제품',origin:' Made in Korea ',category_retail:'020001',need_retail:'불필요'},settings);
- assert.deepEqual(items.map(i=>i.content),['기존 제품','기존 제품']);
+ const bulk=load(),items=[{id:'1',brand:'Old',name_own:'Product A',model:'A',content:'legacy',done:true,done_at:'saved',price_retail:100,price_naver:100,link_np:true,automation:{categoryCodes:{retail:'001',wholesale:'002'},detailImages:[{id:'img',folder:'old',filename:'a.jpg'}],thumbnail:{path:'keep'}}},{id:'2',brand:'Old 2',name_own:'Product B',model:'B',content:'legacy 2',done:false,price_retail:200,price_naver:50,link_np:false,automation:{detailImages:[]}}];
+ bulk.applyChanges(items,{content:'ignored',origin:' Made in Korea ',category_retail:'020001',need_retail:'불필요'},settings);
+ assert.deepEqual(items.map(i=>i.content),['legacy','legacy 2']);
  assert.deepEqual(items.map(i=>i.automation.categoryCodes.retail),['020001','020001']);
  assert.deepEqual(items.map(i=>i.automation.categoryCodes.wholesale),['002','']);
  assert.equal(items[0].automation.generator.folder,'');
@@ -23,6 +23,11 @@ test('bulk price linking follows the same retail to Naver rules as individual ed
  bulk.applyChanges([linked,separate],{price_retail:250},settings);assert.equal(linked.price_naver,250);assert.equal(separate.price_naver,80);
  bulk.applyChanges([linked,separate],{link_np:false,price_naver:300},settings);assert.equal(linked.price_naver,300);assert.equal(separate.price_naver,300);
  bulk.applyChanges([linked,separate],{link_np:true,price_naver:999},settings);assert.equal(linked.price_naver,250);assert.equal(separate.price_naver,250);
+});
+
+test('bulk retail regular price stays independent from sale and linked Naver prices',()=>{
+ const bulk=load(),item={price_retail_regular:300,price_retail:250,price_naver:250,link_np:true,automation:{}};
+ bulk.applyChanges([item],{price_retail_regular:400},settings);assert.equal(item.price_retail_regular,400);assert.equal(item.price_retail,250);assert.equal(item.price_naver,250);
 });
 
 test('bulk brand uses canonical settings names and explicit generator values win over category defaults',()=>{

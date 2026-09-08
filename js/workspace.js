@@ -1,7 +1,7 @@
 /* Presentation only: shared rows, persistence and registration data remain authoritative. */
 var Workspace = (function () {
   var expanded = false, filter = "all", listId = null, tableResizeObserver = null;
-  var compactKeys = ['seq','name_naver','model','content','price_wholesale','price_wholesale_master','price_naver','image','ref_link','note','act'];
+  var compactKeys = ['seq','name_naver','model','price_retail_regular','price_wholesale','price_wholesale_master','price_naver','image','ref_link','note','act'];
   function compactHidden(key) { return !expanded && compactKeys.includes(key); }
   function columns() {
     document.querySelectorAll('#gridCols col').forEach(function (col,index) {
@@ -12,7 +12,7 @@ var Workspace = (function () {
     });
     var grid=document.getElementById('grid');if(grid)grid.classList.toggle('is-expanded',expanded);
     var groups=document.querySelectorAll('#grid thead .grp');
-    if(groups.length===3){groups[0].colSpan=expanded?2:1;groups[2].colSpan=expanded?4:1;}
+    if(groups.length===3){groups[0].colSpan=expanded?2:1;groups[2].colSpan=expanded?5:1;}
   }
   function fitWidths(entries,available) {
     var fitted=entries.map(function(entry){return {col:entry.col,key:entry.key,width:entry.width};});
@@ -46,32 +46,41 @@ var Workspace = (function () {
     document.querySelectorAll('#gridBody tr[data-id]').forEach(function(row){var it=State.items.find(function(i){return i.id===row.dataset.id;});if(!it)return;var summary=row.querySelector('.automation-summary');if(summary)summary.outerHTML=AutomationEditor.summary(it);});
     UI.applyColWidths();
   }
-  var textFields=[['name_own','자사몰 상품명'],['name_naver','네이버 상품명'],['model','모델명'],['ref_link','참고 링크'],['note','비고']];
-  var priceFields=[['price_retail','소매몰 가격','need_retail'],['price_wholesale','도매몰 베이직 가격','need_wholesale'],['price_wholesale_master','도매몰 마스터 가격','need_wholesale'],['price_naver','네이버 가격','need_naver']];
-  function brandOptions(it) {
+  var priceFields=[['price_retail_regular','소매몰 정가','need_retail'],['price_retail','소매몰 판매가 (도매몰 정가)','need_retail'],['price_wholesale','도매몰 베이직','need_wholesale'],['price_wholesale_master','도매몰 마스터','need_wholesale'],['price_naver','네이버 스마트스토어','need_naver']];
+  function brandOptions(it,query) {
     var brands=AutomationEditor.brands(),matched=AutomationCore.matchBrand(brands,it.brand),custom=isBrandCustom(it,brands);
+    var q=String(query||'').trim().toLowerCase();
     var out='<option value="">브랜드 선택</option>';
     brands.slice().sort(function(a,b){return a.name.localeCompare(b.name,'en',{sensitivity:'base'});}).forEach(function(b){
       if(b.active===false && b!==matched)return;
+      if(q&&b!==matched&&(b.name+' '+(b.code||'')).toLowerCase().indexOf(q)===-1)return;
       out+='<option value="'+esc(b.name)+'"'+(!custom&&b===matched?' selected':'')+'>'+esc(b.name)+(b.active===false?' · 사용 중지':'')+'</option>';
     });
     return out+'<option value="'+UI.BRAND_CUSTOM+'"'+(custom?' selected':'')+'>직접 입력…</option>';
   }
   function brandField(it,ro) {
     var custom=isBrandCustom(it,AutomationEditor.brands());
-    return '<label class="field">브랜드<select data-product-brand-select'+(ro?' disabled':'')+'>'+brandOptions(it)+'</select>'+
+    return '<label class="field">브랜드 선택<select data-product-brand-select'+(ro?' disabled':'')+'>'+brandOptions(it,'')+'</select>'+
       (custom?'<input class="brand-direct-input" data-product-field="brand" value="'+esc(it.brand||'')+'" placeholder="브랜드 직접 입력" maxlength="30"'+(ro?' readonly':'')+'>':'')+
-      '<span class="field-note">등록된 브랜드는 선택 상태로 유지되며, 필요할 때만 직접 입력으로 바꿀 수 있습니다.</span></label>';
+      '<span class="field-note">검색 결과에서 선택하거나 필요할 때만 직접 입력으로 바꿀 수 있습니다.</span></label>';
+  }
+  function searchBrands(it,query) {
+    var selector=document.querySelector('[data-product-brand-select]');
+    if(selector)selector.innerHTML=brandOptions(it,query);
   }
   function fields(it,ro) {
     var issues=AutomationEditor.readiness(it).issues;
     var out='<section class="auto-section"><h3>준비 상태</h3><p class="field-note">'+esc(issues.length?issues.join(' · '):'등록에 필요한 정보가 준비되었습니다. 실제 등록 결과는 별도로 확인하세요.')+'</p></section><section class="auto-section"><h3>상품 정보</h3><div class="field-grid">';
-    out+=brandField(it,ro);
-    textFields.forEach(function(f){out+='<label class="field">'+f[1]+'<input data-product-field="'+f[0]+'" value="'+esc(it[f[0]]||'')+'"'+(ro?' readonly':'')+'></label>';});
+    out+='<label class="field">브랜드 검색<input type="search" data-product-brand-search placeholder="브랜드명 또는 코드 검색"'+(ro?' disabled':'')+'></label>'+brandField(it,ro);
+    out+='<label class="field field-wide">자사몰 상품명<input data-product-field="name_own" value="'+esc(it.name_own||'')+'"'+(ro?' readonly':'')+'></label>';
+    out+='<label class="field field-wide">네이버 상품명<input data-product-field="name_naver" value="'+esc(it.name_naver||'')+'"'+(ro?' readonly':'')+'></label>';
+    out+='<label class="field">모델명<input data-product-field="model" value="'+esc(it.model||'')+'"'+(ro?' readonly':'')+'></label>';
     out+='<label class="field">원산지<input data-basic="origin" value="'+esc(AutomationCore.normalize(it.automation).origin)+'" placeholder="예: Made in China" maxlength="30"'+(ro?' readonly':'')+'><span class="field-note">고도몰 원산지 칸에 그대로 입력됩니다.</span></label>';
-    out+='<label class="field">내용<select data-product-field="content"'+(ro?' disabled':'')+'><option value=""></option>'+CONTENT_OPTIONS.map(function(v){return '<option'+(it.content===v?' selected':'')+'>'+esc(v)+'</option>';}).join('')+'</select></label></div></section><section class="auto-section"><h3>몰별 가격</h3><div class="field-grid">';
-    priceFields.forEach(function(f){var blocked=it[f[2]]!=='필요'||(f[0]==='price_naver'&&it.link_np!==false);out+='<label class="field">'+f[1]+'<input inputmode="numeric" data-product-field="'+f[0]+'" value="'+esc(withComma(it[f[0]]))+'"'+(ro?' readonly':blocked?' disabled':'')+'></label>';});
-    out+='</div><label class="field-note"><input type="checkbox" data-product-field="link_np"'+(it.link_np!==false?' checked':'')+(ro?' disabled':'')+'> 네이버 가격을 소매몰과 동일하게 유지</label><p class="field-note">등록할 몰은 표에서 선택하세요. 선택한 몰의 가격만 입력할 수 있습니다.</p></section>';
+    out+='<label class="field">참고 링크<input data-product-field="ref_link" value="'+esc(it.ref_link||'')+'" placeholder="https://"'+(ro?' readonly':'')+'></label>';
+    out+='<label class="field">비고<input data-product-field="note" value="'+esc(it.note||'')+'"'+(ro?' readonly':'')+'></label>';
+    out+='</div></section><section class="auto-section"><h3>몰별 가격</h3><div class="field-grid">';
+    priceFields.forEach(function(f){var blocked=it[f[2]]!=='필요'||(f[0]==='price_naver'&&it.link_np!==false),wide=f[0]==='price_naver'?' field-wide':'';out+='<label class="field'+wide+'">'+f[1]+'<input inputmode="numeric" data-product-field="'+f[0]+'" value="'+esc(withComma(it[f[0]]))+'"'+(ro?' readonly':blocked?' disabled':'')+'></label>';});
+    out+='</div><label class="field-note price-sync"><input type="checkbox" data-product-field="link_np"'+(it.link_np!==false?' checked':'')+(ro?' disabled':'')+'> 네이버 스마트스토어 가격을 소매몰 판매가와 동일하게 유지</label><p class="field-note">등록할 몰은 표에서 선택하세요. 선택한 몰의 가격만 입력할 수 있습니다.</p></section>';
     var regs=(State.registrations||{})[it.id]||{};
     if(Object.keys(regs).length){out+='<section class="auto-section"><h3>실제 등록 결과</h3>';Object.keys(regs).forEach(function(k){var r=regs[k];out+='<p>'+esc(k==='retail'?'소매몰':'도매몰')+' · '+esc(({pending:'대기',running:'진행 중',success:'완료',failed:'실패'})[r.status]||r.status)+(r.goods_no?' #'+esc(r.goods_no):'')+'</p>'+(r.error_message?'<p class="field-note">'+esc(r.error_message)+'</p>':'');});out+='</section>';}
     return out;
@@ -108,6 +117,6 @@ var Workspace = (function () {
     }
     refresh();
   });
-  function width(key,value) {var widths={check:48,brand:190,name_own:220,need_retail:70,need_wholesale:70,need_naver:70,price_retail:110,automation:210};return expanded?value:Math.min(value,widths[key]||value);}
-  return {width:width,fitWidths:fitWidths,visibleItems:visibleItems,filterRows:filterRows,resetFilter:resetFilter,compactHidden:compactHidden,columns:columns,refresh:refresh,fields:fields,editField:editField,selectBrand:selectBrand};
+  function width(key,value) {var widths={check:48,brand:190,name_own:220,need_retail:70,need_wholesale:70,need_naver:70,price_retail:150,automation:210};return expanded?value:Math.min(value,widths[key]||value);}
+  return {width:width,fitWidths:fitWidths,visibleItems:visibleItems,filterRows:filterRows,resetFilter:resetFilter,compactHidden:compactHidden,columns:columns,refresh:refresh,fields:fields,editField:editField,selectBrand:selectBrand,searchBrands:searchBrands};
 })();
