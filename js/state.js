@@ -24,11 +24,11 @@ var HIDEABLE_COLS = [
   { key: "name_own", label: "상품명 · 자사몰" },
   { key: "name_naver", label: "상품명 · 네이버" },
   { key: "model", label: "모델명" },
-  { key: "content", label: "내용" },
   { key: "need_retail", label: "등록 필요 · 소매몰" },
   { key: "need_wholesale", label: "등록 필요 · 도매몰" },
   { key: "need_naver", label: "등록 필요 · 네이버" },
-  { key: "price_retail", label: "가격 · 소매몰" },
+  { key: "price_retail_regular", label: "가격 · 소매몰 정가" },
+  { key: "price_retail", label: "가격 · 소매몰 판매가(도매몰 정가)" },
   { key: "price_wholesale", label: "가격 · 도매몰(베이직)" },
   { key: "price_wholesale_master", label: "가격 · 도매몰(마스터)" },
   { key: "price_naver", label: "가격 · 네이버" },
@@ -48,12 +48,10 @@ function clearSelection() {
   State.selected = {};
 }
 
-/* 내용 / 등록 필요 선택지 */
-var CONTENT_OPTIONS = ["신규 제품", "기존 제품", "기타"];
+/* 등록 필요 선택지 */
 var NEED_OPTIONS = ["필요", "불필요"];
 
 /* 새 행을 추가할 때 미리 채워지는 값 */
-var DEFAULT_CONTENT = "신규 제품";
 var DEFAULT_NEED = "필요";
 
 /* 새 행 기본값 */
@@ -65,11 +63,12 @@ function makeItem(seq) {
     name_own: "",
     name_naver: "",
     model: "",
-    content: DEFAULT_CONTENT,
+    content: "",                 // 이전 데이터 보존용. 화면과 내보내기에서는 더 이상 사용하지 않습니다.
     need_retail: DEFAULT_NEED,
     need_wholesale: DEFAULT_NEED,
     need_naver: DEFAULT_NEED,
-    price_retail: null,
+    price_retail_regular: null,  // 소매몰 정가
+    price_retail: null,          // 소매몰 판매가 · 도매몰 정가
     price_wholesale: null,          // 도매몰 · 베이직
     price_wholesale_master: null,   // 도매몰 · 마스터
     price_naver: null,
@@ -86,7 +85,7 @@ function makeItem(seq) {
 var COPY_FIELDS = [
   "brand", "name_own", "name_naver", "model", "content",
   "need_retail", "need_wholesale", "need_naver",
-  "price_retail", "price_wholesale", "price_wholesale_master", "price_naver",
+  "price_retail_regular", "price_retail", "price_wholesale", "price_wholesale_master", "price_naver",
   "image_url", "ref_link", "note"
 ];
 function copyItem(src) {

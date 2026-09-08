@@ -3,7 +3,7 @@
 
    지원하는 양식
    1) 기본형 : 머리글 한 줄
-      No. | 브랜드 | 품명 | 모델명 | 내용 | 이미지 | 링크 | 비고
+      No. | 브랜드 | 품명 | 모델명 | 이미지 | 링크 | 비고
    2) 확장형 : 머리글 두 줄 (그룹 + 하위)
       품명 → 자사몰 / 스마트스토어,  등록 여부 → 스마트스토어 / 자사몰,  가격 …
 
@@ -12,9 +12,9 @@
 var XlsxImport = (function () {
 
   /* 머리글 줄을 찾을 때 쓰는 단어 */
-  var HEADER_HINTS = ["브랜드", "모델", "품명", "상품명", "제품명", "내용", "링크", "비고", "이미지", "가격", "등록"];
+  var HEADER_HINTS = ["브랜드", "모델", "품명", "상품명", "제품명", "링크", "비고", "이미지", "가격", "정가", "판매가", "등록"];
   /* 두 번째 머리글 줄(하위 항목)을 판별할 때 쓰는 단어 */
-  var SUB_HINTS = ["자사몰", "네이버", "스마트", "스토어", "소매", "도매", "전용", "베이직", "마스터"];
+  var SUB_HINTS = ["자사몰", "네이버", "스마트", "스토어", "소매", "도매", "전용", "정가", "판매가", "베이직", "마스터"];
 
   function norm(v) {
     return String(v == null ? "" : v).replace(/\s+/g, "").replace(/[.\-_()[\]/]/g, "").toLowerCase();
@@ -99,11 +99,11 @@ var XlsxImport = (function () {
     name_own: "상품명(자사몰)",
     name_naver: "상품명(네이버)",
     model: "모델명",
-    content: "내용",
     need_retail: "등록 필요(소매몰)",
     need_wholesale: "등록 필요(도매몰)",
     need_naver: "등록 필요(네이버)",
-    price_retail: "가격(소매몰)",
+    price_retail_regular: "가격(소매몰 정가)",
+    price_retail: "가격(소매몰 판매가·도매몰 정가)",
     price_wholesale: "가격(도매몰 베이직)",
     price_wholesale_master: "가격(도매몰 마스터)",
     price_naver: "가격(네이버)",
@@ -129,8 +129,6 @@ var XlsxImport = (function () {
     // '이미지 사용 여부' 열은 더 이상 쓰지 않습니다. (이미지 열과 함께 가져오지 않음)
     if (has(both, ["이미지사용", "이미지여부"])) return [];
 
-    if (has(p, ["내용", "구분"])) return ["content"];
-
     if (has(p, ["등록"])) {
       if (has(s, ["소매"])) return ["need_retail"];
       if (has(s, ["도매"])) return ["need_wholesale"];
@@ -139,17 +137,22 @@ var XlsxImport = (function () {
       return ["need_retail", "need_wholesale", "need_naver"];   // 하위 구분이 없으면 3곳 모두
     }
 
-    if (has(p, ["가격", "판매가", "단가", "소비자가", "공급가"])) {
-      if (has(s, ["소매"])) return ["price_retail"];
-      if (has(s, ["도매"])) {
+    var tierPrice = has(both, ["소매", "자사", "도매"]) && has(both, ["베이직", "마스터", "basic", "master"]);
+    if (has(both, ["가격", "판매가", "정가", "단가", "소비자가", "공급가"]) || tierPrice) {
+      if (has(both, ["네이버", "스마트스토어"])) return ["price_naver"];
+      if (has(both, ["소매", "자사"])) {
+        if (has(both, ["판매가"])) return ["price_retail"];
+        if (has(both, ["정가", "소비자가"])) return ["price_retail_regular"];
+        return ["price_retail"];
+      }
+      if (has(both, ["도매"])) {
         // 도매몰은 등급별 차등가 — 베이직 / 마스터로 나뉩니다.
-        if (has(s, ["마스터", "master"])) return ["price_wholesale_master"];
+        if (has(both, ["마스터", "master"])) return ["price_wholesale_master"];
+        if (has(both, ["정가"])) return ["price_retail"];
         return ["price_wholesale"];                              // 도매몰 기본(베이직)
       }
-      if (has(s, ["마스터", "master"])) return ["price_wholesale_master"];
-      if (has(s, ["베이직", "basic"])) return ["price_wholesale"];
-      if (has(s, ["네이버", "스마트", "스토어"])) return ["price_naver"];
-      if (has(s, ["자사"])) return ["price_retail"];
+      if (has(both, ["마스터", "master"])) return ["price_wholesale_master"];
+      if (has(both, ["베이직", "basic"])) return ["price_wholesale"];
       return ["price_retail"];                                   // 하위 구분이 없으면 소매몰 가격
     }
 
@@ -161,14 +164,6 @@ var XlsxImport = (function () {
   }
 
   /* ---------- 값 다듬기 ---------- */
-  function normContent(v) {
-    var s = txt(v);
-    if (!s) return DEFAULT_CONTENT;
-    var n = norm(s);
-    if (has(n, ["신규", "신제품", "신상품", "new"])) return "신규 제품";
-    if (has(n, ["기존"])) return "기존 제품";
-    return CONTENT_OPTIONS.indexOf(s) > -1 ? s : "기타";
-  }
   function normNeed(v) {
     var s = txt(v);
     if (!s) return DEFAULT_NEED;
@@ -285,9 +280,7 @@ var XlsxImport = (function () {
         var s2 = txt(raw);
 
         col.fields.forEach(function (f) {
-          if (f === "content") {
-            if (s2) { it.content = normContent(s2); filled = true; }
-          } else if (f.indexOf("need_") === 0) {
+          if (f.indexOf("need_") === 0) {
             if (s2) { it[f] = normNeed(s2); filled = true; }
           } else if (f.indexOf("price_") === 0) {
             var n2 = normPrice(raw);
@@ -331,5 +324,5 @@ var XlsxImport = (function () {
     });
   }
 
-  return { parse: parse, parseFile: parseFile };
+  return { parse: parse, parseFile: parseFile, mapColumn: mapColumn };
 })();

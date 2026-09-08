@@ -5,9 +5,8 @@ var UI = (function () {
   /* ---------- 열 너비 (마우스로 조절, 브라우저에 기억) ---------- */
   var DEFAULT_COL_W = {
     check: 58, seq: 84, brand: 190, name_own: 240, name_naver: 240, model: 140,
-    content: 110,
     need_retail: 92, need_wholesale: 92, need_naver: 92,
-    price_retail: 120, price_wholesale: 120, price_wholesale_master: 120, price_naver: 120,
+    price_retail_regular: 120, price_retail: 160, price_wholesale: 120, price_wholesale_master: 120, price_naver: 140,
     image: 100, ref_link: 110, note: 180, act: 62, automation: 240
   };
   var COL_W_KEY = "productTool.colWidths";
@@ -130,13 +129,6 @@ var UI = (function () {
       (ph ? ' placeholder="' + esc(ph) + '"' : "") + ">";
   }
 
-  function selectInput(field, val, options) {
-    var opts = '<option value=""></option>' + options.map(function (o) {
-      return '<option value="' + esc(o) + '"' + (val === o ? " selected" : "") + ">" + esc(o) + "</option>";
-    }).join("");
-    return '<select class="cell-select" data-field="' + field + '">' + opts + "</select>";
-  }
-
   /* 브랜드 셀 — 등록된 브랜드 목록에서 고르거나 '직접 입력'으로 바꿔 자유롭게 씁니다.
      저장되는 값은 언제나 브랜드 문자열 하나입니다. */
   var BRAND_CUSTOM = "__custom__";
@@ -257,10 +249,6 @@ var UI = (function () {
     c.push('<td class="c-name k-name_naver">' + (editor ? textInput("name_naver", it.name_naver) : ro(it.name_naver, true)) + "</td>");
     c.push('<td class="c-model k-model">' + (editor ? textInput("model", it.model) : ro(it.model, true)) + "</td>");
 
-    // 내용
-    c.push('<td class="c-content k-content">' +
-      (editor ? selectInput("content", it.content, CONTENT_OPTIONS) : roTag(it.content, "content")) + "</td>");
-
     // 등록 필요 3종 — 편집: 체크박스(체크=필요), 보기: 태그
     ["need_retail", "need_wholesale", "need_naver"].forEach(function (f) {
       var v = it[f];
@@ -280,22 +268,22 @@ var UI = (function () {
 
     // 등록 필요가 체크되지 않은(불필요) 가격은 입력할 수 없습니다.
     function needOn(f) {
-      if (f === "price_retail") return it.need_retail === "필요";
+      if (f === "price_retail_regular" || f === "price_retail") return it.need_retail === "필요";
       if (f === "price_wholesale" || f === "price_wholesale_master") return it.need_wholesale === "필요";
       if (f === "price_naver") return it.need_naver === "필요";
       return true;
     }
 
-    // 가격 4종 (도매몰은 베이직·마스터 등급으로 분리)
-    ["price_retail", "price_wholesale", "price_wholesale_master", "price_naver"].forEach(function (f) {
+    // 가격 5종 (소매몰 정가·판매가, 도매몰 베이직·마스터, 네이버)
+    ["price_retail_regular", "price_retail", "price_wholesale", "price_wholesale_master", "price_naver"].forEach(function (f) {
       if (editor) {
         var needBlocked = !needOn(f);
         if (f === "price_naver") {
           c.push('<td class="c-price k-' + f + '">' +
-            '<label class="price-link" title="소매몰 가격과 같게 유지합니다">' +
+            '<label class="price-link" title="소매몰 판매가와 같게 유지합니다">' +
               '<input type="checkbox" class="chk-price-link"' + (linked ? " checked" : "") +
                 (needBlocked ? " disabled" : "") + ">" +
-              "<span>소매몰과 동일</span>" +
+              "<span>판매가와 동일</span>" +
             "</label>" +
             priceInput(f, it[f], needBlocked || linked) + "</td>");
         } else {
@@ -398,9 +386,9 @@ var UI = (function () {
       case "name_own": return it.name_own || "";
       case "name_naver": return it.name_naver || "";
       case "model": return it.model || "";
-      case "content": return it.content || "";
       case "ref_link": return it.ref_link || "";
       case "note": return it.note || "";
+      case "price_retail_regular":
       case "price_retail":
       case "price_wholesale":
       case "price_wholesale_master":
@@ -409,7 +397,7 @@ var UI = (function () {
       default: return "";
     }
   }
-  var EXTRA_PAD = { seq: 52, brand: 70, content: 46, price_retail: 34, price_wholesale: 34, price_wholesale_master: 34, price_naver: 34 };
+  var EXTRA_PAD = { seq: 52, brand: 70, price_retail_regular: 34, price_retail: 34, price_wholesale: 34, price_wholesale_master: 34, price_naver: 34 };
 
   function autoFitColumn(key) {
     var cols = document.querySelectorAll("#gridCols col");

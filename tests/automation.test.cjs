@@ -49,13 +49,14 @@ test('image check rejects broken content even if load fired; times out; detects 
  class Stuck{set src(v){}}
  assert.equal((await validator(Stuck).check('stuck',5)).status,'timeout');
 });
-test('saving the draft never sends completion fields and includes derived HTML',async()=>{
+test('saving the draft includes retail regular price, excludes completion fields, and derives HTML',async()=>{
  let called;
  const context={AutomationCore:C,supabaseClient:{async rpc(name,args){called={name,args};return {data:null,error:null};}}};
  vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('../js/api.js'),'utf8'),context);
  const images=C.generate({brand:'Brand',product:'Model',folder:'audio',extension:'jpg',count:1});
- await context.Api.saveDraft({id:'list'},[{id:'item',done:true,done_at:'stamp',automation:{detailImages:images}}],[]);
+ await context.Api.saveDraft({id:'list'},[{id:'item',done:true,done_at:'stamp',price_retail_regular:120000,automation:{detailImages:images}}],[]);
  assert.equal(called.name,'save_product_draft');assert.equal('done' in called.args.p_items[0],false);assert.equal('done_at' in called.args.p_items[0],false);
+ assert.equal(called.args.p_items[0].price_retail_regular,120000);
  assert.equal(called.args.p_items[0].automation.detailHtml,C.html(images));
 });
 test('copied rows have independent image data and completion state',()=>{
@@ -105,9 +106,10 @@ test('brand list: initial data, case/space-insensitive matching, and duplicate/f
  const legacy={categories:{retail:[],wholesale:[]},folders:[]};C.validateSettings(legacy);assert.deepEqual(legacy.brands,[]);
 });
 test('export marks registered brands and strips transient UI flags',()=>{
- const row={id:'b',brand:'tilta',brand_custom:false,link_np:true,name_own:'상품',need_retail:'불필요',need_wholesale:'불필요',automation:{}};
+ const row={id:'b',brand:'tilta',brand_custom:false,link_np:true,content:'legacy',name_own:'상품',price_retail_regular:500000,need_retail:'불필요',need_wholesale:'불필요',automation:{}};
  const out=C.exportItem(row,settings);
  assert.equal(out.brand,'tilta');assert.equal(out.brandCode,'165');assert.equal(out.brandRegistered,true);
+ assert.equal(out.price_retail_regular,500000);assert.equal('content' in JSON.parse(JSON.stringify(out)),false);
  assert.equal('brand_custom' in JSON.parse(JSON.stringify(out)),false);assert.equal('link_np' in JSON.parse(JSON.stringify(out)),false);
  const custom=C.exportItem({...row,brand:'Unknown Maker'},settings);assert.equal(custom.brandCode,'');assert.equal(custom.brandRegistered,false);
  assert.equal(C.exportItem({...row,brand:''},{categories:settings.categories,folders:[]}).brandRegistered,false);
@@ -115,7 +117,7 @@ test('export marks registered brands and strips transient UI flags',()=>{
 test('new rows no longer carry image_usage and brand custom state derives from the list',()=>{
  const context={AutomationCore:C,uuid:()=>'id',document:{getElementById:()=>null}};
  vm.createContext(context);vm.runInContext(fs.readFileSync(require.resolve('../js/state.js'),'utf8'),context);
- const it=context.makeItem(1);assert.equal('image_usage' in it,false);assert.equal(context.COPY_FIELDS.includes('image_usage'),false);
+ const it=context.makeItem(1);assert.equal('image_usage' in it,false);assert.equal(context.COPY_FIELDS.includes('image_usage'),false);assert.equal(it.price_retail_regular,null);assert.equal(context.COPY_FIELDS.includes('price_retail_regular'),true);
  assert.equal(context.HIDEABLE_COLS.some(c=>c.key==='image_usage'),false);
  assert.equal(context.isBrandCustom({brand:''},settings.brands),false);
  assert.equal(context.isBrandCustom({brand:'Tilta'},settings.brands),false);

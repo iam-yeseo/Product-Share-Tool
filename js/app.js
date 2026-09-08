@@ -419,7 +419,7 @@ function bindEvents() {
       var formatted = withComma(e.target.value);
       e.target.value = formatted;
       it[f] = toNumberOrNull(formatted);
-      // 소매몰 가격이 네이버와 연동되어 있으면 함께 갱신합니다.
+      // 소매몰 판매가가 네이버와 연동되어 있으면 함께 갱신합니다.
       if (f === "price_retail" && it.link_np !== false) {
         it.price_naver = it.price_retail;
         var naverInput = tr.querySelector('.cell-price[data-field="price_naver"]');

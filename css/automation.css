@@ -32,7 +32,7 @@ body.view-editor:not(.automation-mode) .automation-controls{display:none}
 .drawer-foot{position:sticky;bottom:0;padding:14px 24px;border-top:1px solid var(--line);background:var(--surface);display:flex;align-items:center;justify-content:flex-end;gap:16px;font-size:12px;color:var(--text-sub)}
 #autoBody{padding:0 24px 20px}.auto-section{padding:20px 0;border-bottom:1px solid var(--line)}.auto-section:last-child{border:0}
 .auto-section h3{margin:0 0 12px;font-size:15px}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}.section-title h3,.section-title h2{margin:0}
-.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.generator-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.field-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.field-wide{grid-column:1/-1}.generator-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
 .field{display:flex;flex-direction:column;gap:7px;font-weight:600;min-width:0}.field-note{font-size:12px;color:var(--text-sub);line-height:1.7;font-weight:400;overflow-wrap:anywhere}
 .field input,.field select,.automation-controls select,.image-fields input,.image-fields select,.image-url,.settings-page input:not([type=checkbox]),.settings-page select{min-width:0;padding:9px 10px;border:1px solid var(--line-strong);border-radius:7px;background:var(--surface);max-width:100%}
 .field input:focus,.field select:focus,.image-fields input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
@@ -69,6 +69,7 @@ body.view-editor:not(.automation-mode) .automation-controls{display:none}
 .readiness-count b{margin-left:5px;color:var(--text)}
 .ready-missing{color:#a34b16}.ready-images{color:#8a6508}.ready-ready{color:var(--ok)}
 .ready-label{font-size:12px}.automation-summary{width:100%;padding:8px 0;line-height:1.5}.automation-summary span{overflow-wrap:anywhere}
+.price-sync{display:flex;align-items:center;gap:6px;margin-top:10px}.price-sync input{margin:0;accent-color:var(--brand)}
 .workspace-more{position:relative}.workspace-more>summary{list-style:none;cursor:pointer}.workspace-more>summary::-webkit-details-marker{display:none}
 .workspace-more-items{position:absolute;right:0;top:42px;min-width:220px;z-index:15;display:flex;flex-direction:column;gap:8px;padding:12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
 .workspace-more-items .btn{text-align:left;width:100%}.workspace-more-items .col-panel{right:0;left:auto;max-width:80vw}.list-history{font-size:12px;padding:8px}.list-history summary{cursor:pointer}.list-history .meta-field{margin-top:10px}

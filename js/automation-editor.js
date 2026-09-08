@@ -176,6 +176,7 @@ var AutomationEditor = (function () {
     dialog.addEventListener('cancel',function(e){e.preventDefault();close();});
     dialog.addEventListener('input',function(e){
       var it=current();if(!it || State.view!=='editor')return;
+      if(e.target.hasAttribute('data-product-brand-search') && typeof Workspace !== 'undefined'){Workspace.searchBrands(it,e.target.value);return;}
       if(e.target.dataset.productField && typeof Workspace !== 'undefined'){Workspace.editField(it,e.target);touch();return;}
       if(e.target.dataset.categorySearch){var store=e.target.dataset.categorySearch;document.getElementById('category-'+store).innerHTML=categoryOptions(store,it.automation.categoryCodes[store],e.target.value);return;}
       if(e.target.dataset.generator){it.automation.generator[e.target.dataset.generator]=e.target.value;touch();}

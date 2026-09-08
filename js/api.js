@@ -104,6 +104,7 @@ var Api = (function () {
           need_retail: it.need_retail || "",
           need_wholesale: it.need_wholesale || "",
           need_naver: it.need_naver || "",
+          price_retail_regular: it.price_retail_regular,
           price_retail: it.price_retail,
           price_wholesale: it.price_wholesale,
           price_wholesale_master: it.price_wholesale_master,

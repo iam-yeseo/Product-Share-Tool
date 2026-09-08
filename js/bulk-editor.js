@@ -14,7 +14,7 @@ var BulkEditor = (function () {
         it.brand = matched ? matched.name : brand;
         it.brand_custom = !!brand && !matched;
       }
-      ['content','ref_link','note','need_retail','need_wholesale','need_naver'].forEach(function (key) {
+      ['ref_link','note','need_retail','need_wholesale','need_naver'].forEach(function (key) {
         if (hasOwn(changes, key)) it[key] = changes[key];
       });
       if (hasOwn(changes, 'origin')) a.origin = String(changes.origin || '').trim();
@@ -30,7 +30,7 @@ var BulkEditor = (function () {
       var changesRetail = hasOwn(changes, 'price_retail');
       var changesNaver = hasOwn(changes, 'price_naver');
       var changesLink = hasOwn(changes, 'link_np');
-      ['price_retail','price_wholesale','price_wholesale_master'].forEach(function (key) {
+      ['price_retail_regular','price_retail','price_wholesale','price_wholesale_master'].forEach(function (key) {
         if (hasOwn(changes, key)) it[key] = changes[key];
       });
       if (changesLink) it.link_np = changes.link_np;
@@ -75,7 +75,6 @@ var BulkEditor = (function () {
     document.getElementById('bulkBody').innerHTML =
       '<section class="bulk-section"><h3>상품 기본 설정</h3><p class="field-note">적용할 항목만 체크하세요. 비운 값도 의도적으로 적용할 수 있습니다.</p><div class="bulk-fields">' +
         row('brand','브랜드',brandControl()) +
-        row('content','내용',select('content',CONTENT_OPTIONS.map(function (v) { return [v,v]; }),'내용 비우기')) +
         row('origin','원산지',input('origin','text','예: Made in China',' maxlength="30"')) +
         row('ref_link','참고 링크',input('ref_link','text','https://')) +
         row('note','비고',input('note','text','공통 비고')) +
@@ -86,11 +85,12 @@ var BulkEditor = (function () {
         row('need_naver','네이버 등록 필요',select('need_naver',NEED_OPTIONS.map(function (v) { return [v,v]; }),'선택',true)) +
         row('category_retail','소매몰 카테고리',categoryControl('retail')) +
         row('category_wholesale','도매몰 카테고리',categoryControl('wholesale')) +
-        row('price_retail','소매몰 가격',input('price_retail','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
-        row('price_wholesale','도매몰 베이직 가격',input('price_wholesale','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
-        row('price_wholesale_master','도매몰 마스터 가격',input('price_wholesale_master','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
-        row('link_np','네이버 가격 연동',select('link_np',[['true','소매몰 가격과 동일'],['false','네이버 가격 별도 입력']],'선택',true)) +
-        row('price_naver','네이버 가격',input('price_naver','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price'),'가격 연동을 사용하는 상품은 소매몰 가격이 우선합니다.') +
+        row('price_retail_regular','소매몰 정가',input('price_retail_regular','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
+        row('price_retail','소매몰 판매가 (도매몰 정가)',input('price_retail','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
+        row('price_wholesale','도매몰 베이직',input('price_wholesale','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
+        row('price_wholesale_master','도매몰 마스터',input('price_wholesale_master','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
+        row('link_np','네이버 스마트스토어 가격 연동',select('link_np',[['true','소매몰 판매가와 동일'],['false','네이버 가격 별도 입력']],'선택',true)) +
+        row('price_naver','네이버 스마트스토어',input('price_naver','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price'),'가격 연동을 사용하는 상품은 소매몰 판매가가 우선합니다.') +
       '</div></section>' +
       '<section class="bulk-section"><h3>상세 이미지 주소 생성 기본값</h3><p class="field-note">이미 만든 상세 이미지 주소는 바꾸지 않습니다.</p><div class="bulk-fields">' +
         row('generator_folder','이미지 폴더',select('generator_folder',folders,'폴더 미선택으로 변경')) +
