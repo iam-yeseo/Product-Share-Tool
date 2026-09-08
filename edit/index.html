@@ -92,6 +92,7 @@
       <!-- 행 편집 툴바 (작성일 박스 아래) -->
       <div class="table-tools only-editor">
         <button id="btnAddRow" class="btn btn-ghost">+ 상품 추가</button>
+        <button id="btnBulkEdit" class="btn btn-primary" disabled hidden>일괄 설정</button>
         <button id="btnCopyRows" class="btn btn-ghost" disabled>복사</button>
         <button id="btnDeleteRows" class="btn btn-ghost btn-danger-line" disabled>삭제</button>
         <span class="foot-div"></span>
@@ -102,7 +103,7 @@
           <button id="btnColSettings" class="btn btn-ghost" type="button">열 표시 ▾</button>
           <div id="colSettingsPanel" class="col-panel" hidden></div>
         </div>
-        <span id="selCount" class="sel-count">행을 체크하면 복사·삭제할 수 있습니다</span>
+        <span id="selCount" class="sel-count">행을 체크하면 일괄 설정·복사·삭제할 수 있습니다</span>
         <span class="foot-hint">저장을 눌러야 다른 사람에게 반영됩니다.</span>
       </div>
 
@@ -199,6 +200,13 @@
   <div id="autoBody"></div>
   <footer class="drawer-foot"><span class="only-editor">변경 내용은 목록에 반영됩니다. 상단 저장을 눌러 공유하세요.</span><button id="autoSave" class="btn btn-primary only-editor">목록에 반영</button></footer>
 </dialog>
+<dialog id="bulkDialog" class="bulk-dialog only-editor" aria-labelledby="bulkTitle">
+  <header class="drawer-head"><div><h2 id="bulkTitle">선택 상품 일괄 설정</h2><p id="bulkDescription" class="field-note"></p></div><button id="bulkClose" class="icon-btn" aria-label="일괄 설정 닫기">×</button></header>
+  <form id="bulkForm">
+    <div id="bulkBody"></div>
+    <footer class="drawer-foot"><span>적용을 체크한 값만 바뀌며, 상단 저장을 눌러야 공유됩니다.</span><button type="button" id="bulkCancel" class="btn">취소</button><button type="submit" id="bulkApply" class="btn btn-primary">선택 상품에 적용</button></footer>
+  </form>
+</dialog>
 <script type="application/json" id="automation-data">{"schemaVersion":1,"items":[]}</script>
 <div id="toast" class="toast" hidden></div>
 
@@ -216,5 +224,6 @@
 <script src="../js/ui.js"></script>
 <script src="../js/app.js"></script>
 <script src="../js/workspace.js"></script>
+<script src="../js/bulk-editor.js"></script>
 </body>
 </html>
