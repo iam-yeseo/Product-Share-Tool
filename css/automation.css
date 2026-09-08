@@ -77,3 +77,17 @@ body.view-editor:not(.automation-mode) .automation-controls{display:none}
 .automation-dialog::backdrop{background:#11182733}.advanced-output>summary{cursor:pointer;font-weight:600;padding-bottom:14px}.drawer-foot span{line-height:1.6}.generator-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media(max-width:600px){.workspace-toolbar{gap:8px}.readiness-filters{width:100%;gap:4px}.readiness-count{padding:6px;font-size:11px}.automation-dialog{width:100vw;border-radius:0}.generator-grid{grid-template-columns:1fr}.drawer-foot{flex-wrap:wrap}.drawer-foot span{display:block;flex:1;min-width:150px}.gnb-left .logo{display:none}}
 button.readiness-count{border:1px solid var(--line);cursor:pointer}button.readiness-count[aria-pressed=true]{background:var(--brand-soft);border-color:var(--brand);color:var(--brand)}
+
+/* 선택 상품 일괄 설정 */
+.bulk-dialog{width:min(860px,96vw);max-height:94dvh;padding:0;border:1px solid var(--line);border-radius:14px;color:var(--text);background:var(--surface);box-shadow:0 24px 90px #10182840;overflow:auto}
+.bulk-dialog::backdrop{background:#11182766}
+.bulk-dialog .drawer-head>div{min-width:0}.bulk-dialog .drawer-head p{margin:5px 0 0}
+#bulkBody{padding:8px 24px 24px}.bulk-section{padding:18px 0;border-bottom:1px solid var(--line)}.bulk-section:last-child{border-bottom:0}.bulk-section h3{margin:0 0 6px;font-size:15px}.bulk-section>.field-note{margin:0 0 12px}
+.bulk-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+.bulk-field{display:grid;grid-template-columns:24px minmax(0,1fr);gap:4px 8px;padding:11px;border:1px solid var(--line);border-radius:9px;background:var(--surface)}
+.bulk-enable{grid-column:1/-1;display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;cursor:pointer}.bulk-enable input{width:15px;height:15px;margin:0;accent-color:var(--brand)}
+.bulk-control{grid-column:2;display:flex;flex-direction:column;gap:7px;min-width:0}.bulk-control input,.bulk-control select{width:100%;min-width:0;padding:9px 10px;border:1px solid var(--line-strong);border-radius:7px;background:var(--surface)}
+.bulk-control :disabled{background:var(--bg);color:var(--text-mute);cursor:not-allowed}.bulk-control .field-note{margin:0}
+.bulk-custom-brand[hidden]{display:none}
+.bulk-dialog .drawer-foot{position:sticky}.bulk-dialog .drawer-foot span{margin-right:auto;max-width:420px}
+@media(max-width:680px){.bulk-dialog{width:100vw;height:100dvh;max-height:100dvh;border-radius:0}.bulk-fields{grid-template-columns:1fr}#bulkBody{padding:4px 16px 20px}.bulk-dialog .drawer-foot{flex-wrap:wrap}.bulk-dialog .drawer-foot span{flex:1 0 100%;width:100%;max-width:none}.bulk-dialog .drawer-foot .btn{white-space:nowrap}.bulk-dialog #bulkCancel{flex:0 0 68px}.bulk-dialog #bulkApply{flex:1 1 150px}}

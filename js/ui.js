@@ -220,7 +220,7 @@ var UI = (function () {
     if (editor) {
       c.push('<td class="c-check">' +
         '<input type="checkbox" class="chk-sel"' + (selected ? " checked" : "") +
-        ' title="행 선택 (복사·삭제용, 등록 상태는 바뀌지 않습니다)">' +
+        ' title="행 선택 (일괄 설정·복사·삭제용, 등록 상태는 바뀌지 않습니다)">' +
         (it.done ? '<span class="done-mark" title="등록 완료된 행입니다">✓</span>' : "") +
         "</td>");
     } else {
@@ -326,15 +326,17 @@ var UI = (function () {
     return '<tr class="' + cls + '" data-id="' + esc(it.id) + '">' + c.join("") + "</tr>";
   }
 
-  /* 선택 개수에 따라 툴바(행 복사·행 삭제) 상태를 갱신 */
+  /* 선택 개수에 따라 툴바(일괄 설정·행 복사·행 삭제) 상태를 갱신 */
   function renderToolbar() {
     var n = selectedCount();
     var label = document.getElementById("selCount");
+    var bulkBtn = document.getElementById("btnBulkEdit");
     var copyBtn = document.getElementById("btnCopyRows");
     var delBtn = document.getElementById("btnDeleteRows");
     var all = document.getElementById("chkAll");
     if (label) label.hidden = n === 0;
-    if (label) label.textContent = n ? "선택 " + n + "건" : "행을 체크하면 복사·삭제할 수 있습니다";
+    if (label) label.textContent = n ? "선택 " + n + "건" : "행을 체크하면 일괄 설정·복사·삭제할 수 있습니다";
+    if (bulkBtn) { bulkBtn.disabled = n === 0; bulkBtn.hidden = n === 0; }
     if (copyBtn) { copyBtn.disabled = n === 0; copyBtn.hidden = n === 0; }
     if (delBtn) { delBtn.disabled = n === 0; delBtn.hidden = n === 0; }
     if (all) {

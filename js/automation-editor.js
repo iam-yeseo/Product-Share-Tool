@@ -248,5 +248,5 @@ var AutomationEditor = (function () {
   }
   async function init() { bind(); try { settings=(await Api.fetchAutomationSettings()).value; } catch(e){toast('자동화 설정 불러오기 실패: '+e.message,'error');} }
   function afterLoad() { var dialog = document.getElementById("automationDialog"); if (dialog.open) { if (current()) render(); else close(); } }
-  return { readiness:readiness, afterLoad:afterLoad, brands:brands, reloadSettings:reloadSettings, isChecking:function(){return checking.size>0 || thumbnailChecks.size>0;}, init:init, open:open, publish:publish, thumbnailCell:thumbnailCell, summary:summary, clearPending:clearPending, copyPending:copyPending, uploadPending:uploadPending };
+  return { readiness:readiness, afterLoad:afterLoad, settings:getSettings, brands:brands, reloadSettings:reloadSettings, isChecking:function(){return checking.size>0 || thumbnailChecks.size>0;}, init:init, open:open, publish:publish, thumbnailCell:thumbnailCell, summary:summary, clearPending:clearPending, copyPending:copyPending, uploadPending:uploadPending };
 })();
