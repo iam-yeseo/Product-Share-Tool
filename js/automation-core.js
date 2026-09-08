@@ -81,7 +81,7 @@ var AutomationCore = (function () {
       if (!c || c.active === false) issues.push((store === 'retail' ? '소매몰' : '도매몰') + ' 카테고리 미선택 또는 사용 중지');
     });
     if (!item.name_own) issues.push('자사몰 상품명 미입력');
-    if (!item.image_url) issues.push('썸네일 미등록');
+    if (!item.image_url && !(item.done && a.thumbnail && a.thumbnail.deletedAt)) issues.push('썸네일 미등록');
     if (!a.detailImages.length) issues.push('상세 이미지 미등록');
     a.detailImages.forEach(function (img, i) {
       if (!imageUrl(img)) issues.push((i + 1) + '번 이미지 주소 형식 오류');

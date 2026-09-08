@@ -83,6 +83,11 @@ test('origin is trimmed on normalize and included in the export payload',()=>{
  const row={id:'o',name_own:'상품',need_retail:'필요',need_wholesale:'불필요',automation:{categoryCodes:{retail:'020001',wholesale:''},detailImages:[],origin:'Made in Korea'}};
  assert.equal(C.exportItem(row,settings).origin,'Made in Korea');
 });
+test('a completed item stays ready after its retained thumbnail is automatically deleted',()=>{
+ const item={done:true,name_own:'상품',need_retail:'불필요',need_wholesale:'불필요',image_url:'',automation:{thumbnail:{deletedAt:'2026-09-08T00:00:00Z'},detailImages:[]}};
+ assert.equal(C.readyIssues(item,settings).includes('썸네일 미등록'),false);
+ item.done=false;assert.equal(C.readyIssues(item,settings).includes('썸네일 미등록'),true);
+});
 test('brand list: initial data, case/space-insensitive matching, and duplicate/format validation',()=>{
  assert.equal(settings.brands.length,84);
  assert.equal(C.matchBrand(settings.brands,' tilta ').name,'TILTA');

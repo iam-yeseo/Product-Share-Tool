@@ -89,6 +89,12 @@ for (const item of payload.items) {
 
 `brand`는 언제나 문자열입니다. `brandRegistered=true`이면 설정의 브랜드 목록(`app_settings.product_automation_v1.brands`)과 대소문자·공백·기호를 무시하고 일치하는 항목이 있다는 뜻이며, `brandCode`에 그 항목의 고도몰 브랜드 코드(비어 있을 수 있음)가 들어갑니다. `brandRegistered=false`는 편집 페이지에서 직접 입력한 브랜드이므로 등록 프로그램에서 브랜드 매칭 경고로 다루세요. 가격 `null`을 임의로 0원으로 바꾸지 마세요. 카테고리 코드는 항상 문자열이며, 화면 경로는 표시용입니다. 저장된 코드가 설정에서 사라지면 경로가 비어 있고 확인 항목에 표시됩니다. 상품과 이미지의 순서는 각각 `seq`, `order`를 사용합니다.
 
+상품 상세 편집에서도 등록된 브랜드는 선택값을 유지하며, `직접 입력`을 명시적으로 고른 경우에만 직접 입력 모드로 바뀝니다.
+
+## 썸네일 보관 기간
+
+`done=true`가 된 시각에서 3일이 지나면 일일 정리 작업이 `product-thumbnails` Storage 객체를 Storage API로 삭제합니다. 이후 `image_url`은 빈 문자열이 되고 `automation.thumbnail.path`는 제거되며, `automation.thumbnail.deletedAt`에 정리 시각이 남습니다. 이 상태의 완료 상품은 썸네일 미등록 경고로 되돌아가지 않습니다. 완료를 해제하고 재등록하려면 새 썸네일을 업로드해야 합니다.
+
 ## 이미지 검사
 
 - `valid`: 실제 이미지 로딩과 디코딩에 성공하고 크기가 0보다 큼.

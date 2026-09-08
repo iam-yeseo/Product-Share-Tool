@@ -502,11 +502,10 @@ function bindEvents() {
     if (f === "brand" && e.target.classList.contains("brand-select")) {
       if (e.target.value === UI.BRAND_CUSTOM) {
         it.brand_custom = true;
-        if (it.brand) setDirty(true);   // 선택돼 있던 브랜드를 비우고 직접 입력으로 바꿉니다
-        it.brand = "";
+        setDirty(true);   // 직접 입력으로 바꿔도 기존 브랜드명은 초기값으로 유지합니다
         UI.renderGrid();
         var custom = document.querySelector('tr[data-id="' + it.id + '"] .brand-custom');
-        if (custom) custom.focus();
+        if (custom) { custom.focus(); custom.select(); }
         return;
       }
       it.brand_custom = false;
