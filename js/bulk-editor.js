@@ -89,8 +89,7 @@ var BulkEditor = (function () {
         row('price_retail','소매몰 판매가 (도매몰 정가)',input('price_retail','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
         row('price_wholesale','도매몰 베이직',input('price_wholesale','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
         row('price_wholesale_master','도매몰 마스터',input('price_wholesale_master','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
-        row('link_np','네이버 스마트스토어 가격 연동',select('link_np',[['true','소매몰 판매가와 동일'],['false','네이버 가격 별도 입력']],'선택',true)) +
-        row('price_naver','네이버 스마트스토어',input('price_naver','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price'),'가격 연동을 사용하는 상품은 소매몰 판매가가 우선합니다.') +
+        '<p class="field-note bulk-derived-note">네이버 가격은 소비자몰 판매가를 자동으로 사용하며 별도 입력할 수 없습니다.</p>' +
       '</div></section>' +
       '<section class="bulk-section"><h3>상세 이미지 주소 생성 기본값</h3><p class="field-note">이미 만든 상세 이미지 주소는 바꾸지 않습니다.</p><div class="bulk-fields">' +
         row('generator_folder','이미지 폴더',select('generator_folder',folders,'폴더 미선택으로 변경')) +

@@ -64,8 +64,19 @@ async function reloadCurrent() {
 /* ---------- 뷰 전환 ---------- */
 function updatePageLinks() {
   document.querySelectorAll('[data-route]').forEach(function (link) {
-    link.href = '../' + link.dataset.route + '/' + (State.currentListId ? '?list=' + encodeURIComponent(State.currentListId) : '');
-    if (link.dataset.route === document.body.dataset.page) { link.classList.add('is-active'); link.setAttribute('aria-current','page'); }
+    var route = link.dataset.route;
+    if (route === 'settings' && link.dataset.settingsTab) {
+      link.href = '../settings/?tab=' + encodeURIComponent(link.dataset.settingsTab);
+    } else {
+      link.href = '../' + route + '/' + (State.currentListId ? '?list=' + encodeURIComponent(State.currentListId) : '');
+    }
+    var active = route === document.body.dataset.page;
+    if (route === 'settings' && link.dataset.settingsTab) {
+      var tab = new URLSearchParams(location.search).get('tab') || 'brands';
+      active = active && tab === link.dataset.settingsTab;
+    }
+    link.classList.toggle('is-active', active);
+    if (active) link.setAttribute('aria-current','page'); else link.removeAttribute('aria-current');
   });
 }
 
@@ -75,10 +86,8 @@ function updatePageLinks() {
 async function save() {
   if (!State.list || State.view !== "editor" || State.saving) return false;
   if (AutomationEditor.isChecking()) { toast("이미지 검사가 끝난 뒤 저장해 주세요.", "warn"); return false; }
-  var author = (State.list.author || "").trim();
   var date = State.list.work_date || "";
   if (!date) { toast("작성일을 입력해 주세요", "error"); document.getElementById("listDate").focus(); return false; }
-  if (!author) { toast("작성자를 입력해 주세요", "error"); document.getElementById("listAuthor").focus(); return false; }
 
   if (State.remoteChanged &&
       !confirm("편집하는 동안 다른 사람이 이 리스트를 수정했습니다.\n지금 저장하면 내 내용으로 덮어쓸 수 있습니다.\n\n계속 저장할까요?")) {
@@ -92,6 +101,8 @@ async function save() {
   document.querySelector('.layout').inert = true;
   try {
     renumber();
+    // 개편 화면에서는 스마트스토어 가격을 소비자몰 판매가의 읽기 전용 파생값으로 유지합니다.
+    State.items.forEach(function (it) { it.price_naver = it.price_retail; });
     await AutomationEditor.uploadPending();
     await Api.saveDraft(State.list, State.items, removedIds);
     removedIds = [];
@@ -107,7 +118,7 @@ async function save() {
     btn.disabled = false;
     return false;
   } finally {
-    btn.textContent = "저장";
+    btn.textContent = "저장하기";
     State.saving = false;
     document.querySelector('.layout').inert = false;
     AutomationEditor.publish();
@@ -163,17 +174,8 @@ function findIndex(id) {
 }
 
 function addRow() {
-  if(typeof Workspace !== "undefined") Workspace.resetFilter();
-  State.items.push(makeItem(State.items.length + 1));
-  setDirty(true);
-  UI.renderGrid();
-  UI.renderHead();
-  var rows = document.querySelectorAll("#gridBody .row");
-  var last = rows[rows.length - 1];
-  if (last) {
-    var input = last.querySelector('[data-field="brand"]');
-    if (input) input.focus();
-  }
+  if (typeof Workspace !== "undefined") Workspace.resetFilter();
+  if (typeof AutomationEditor !== "undefined" && AutomationEditor.openNew) AutomationEditor.openNew(makeItem(State.items.length + 1));
 }
 
 function moveRow(idx, dir) {
@@ -301,12 +303,7 @@ function bindEvents() {
       var created = await Api.createList((title || "").trim() || "제목 없는 리스트");
       await refreshSidebar();
       await loadList(created.id);
-      if (!State.items.length) {
-        State.items.push(makeItem(1));
-        setDirty(true);
-        UI.renderGrid();
-      }
-      document.getElementById("listAuthor").focus();
+      if (!State.items.length) document.getElementById("btnAddRow").focus();
       closeSidebar();
     } catch (e) {
       console.error(e);
@@ -334,20 +331,54 @@ function bindEvents() {
   });
   document.getElementById("sidebarDim").addEventListener("click", closeSidebar);
 
-  /* 리스트 헤더 입력 */
-  document.getElementById("listTitle").addEventListener("input", function (e) {
+  /* 리스트 정보 모달 */
+  var listTitle = document.getElementById("listTitle");
+  var listDate = document.getElementById("listDate");
+  var listAuthor = document.getElementById("listAuthor");
+  var listInfo = document.getElementById("listInfoModal");
+  var closeListInfo = function () { if (listInfo) listInfo.hidden = true; };
+  if (listTitle) listTitle.addEventListener("input", function (e) {
+    if (!State.list) return;
     State.list.title = e.target.value;
-    document.getElementById("listTitleRO").textContent = e.target.value;
+    var titleDisplay = document.getElementById("listTitleDisplay");
+    if (titleDisplay) titleDisplay.textContent = e.target.value;
     setDirty(true);
   });
-  document.getElementById("listDate").addEventListener("change", function (e) {
+  if (listDate) listDate.addEventListener("change", function (e) {
+    if (!State.list) return;
     State.list.work_date = e.target.value;
     setDirty(true);
   });
-  document.getElementById("listAuthor").addEventListener("input", function (e) {
+  if (listAuthor) listAuthor.addEventListener("input", function (e) {
+    if (!State.list) return;
     State.list.author = e.target.value;
     setDirty(true);
   });
+  var listInfoButton = document.getElementById("btnListInfo");
+  if (listInfoButton) listInfoButton.addEventListener("click", function () {
+    if (!State.list || !listInfo) return;
+    listTitle.value = State.list.title || "";
+    listDate.value = State.list.work_date || "";
+    listAuthor.value = State.list.author || "";
+    listInfo.hidden = false;
+    listTitle.focus();
+  });
+  var listInfoCancel = document.getElementById("listInfoCancel");
+  if (listInfoCancel) listInfoCancel.addEventListener("click", closeListInfo);
+  var listInfoCancelSecondary = document.getElementById("listInfoCancelSecondary");
+  if (listInfoCancelSecondary) listInfoCancelSecondary.addEventListener("click", closeListInfo);
+  var listInfoSave = document.getElementById("listInfoSave");
+  if (listInfoSave) listInfoSave.addEventListener("click", function () {
+    if (!State.list) return;
+    State.list.title = listTitle.value.trim() || "제목 없는 리스트";
+    State.list.work_date = listDate.value;
+    State.list.author = listAuthor.value.trim();
+    setDirty(true);
+    UI.renderHead();
+    closeListInfo();
+    toast("리스트 정보를 반영했습니다. 상단 저장하기를 눌러 공유하세요.");
+  });
+  if (listInfo) listInfo.addEventListener("click", function (event) { if (event.target === listInfo) closeListInfo(); });
 
   document.getElementById("btnDeleteList").addEventListener("click", async function () {
     if (!State.list) return;
@@ -372,16 +403,18 @@ function bindEvents() {
   document.getElementById("btnDeleteRows").addEventListener("click", deleteSelectedRows);
 
   /* 전체 선택 / 해제 */
-  document.getElementById("chkAll").addEventListener("change", function (e) {
-    clearSelection();
-    if (e.target.checked) {
-      (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) { State.selected[it.id] = true; });
-    }
-    UI.renderGrid();
-  });
+  var chkAll = document.getElementById("chkAll");
+  if (chkAll) chkAll.addEventListener("change", function (e) {
+      clearSelection();
+      if (e.target.checked) {
+        (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) { State.selected[it.id] = true; });
+      }
+      UI.renderGrid();
+    });
 
   /* 머리글 일괄 체크 — 등록 필요(소매·도매·네이버) / 네이버 가격 연동 (편집자 전용) */
-  document.querySelector("#grid thead").addEventListener("change", function (e) {
+  var gridHead = document.querySelector("#grid thead");
+  if (gridHead) gridHead.addEventListener("change", function (e) {
     if (State.view !== "editor") return;
 
     if (e.target.classList.contains("chk-need-all")) {
@@ -407,7 +440,7 @@ function bindEvents() {
   /* 표 — 입력 */
   var body = document.getElementById("gridBody");
 
-  body.addEventListener("input", function (e) {
+  if (body) body.addEventListener("input", function (e) {
     var tr = e.target.closest("tr[data-id]");
     if (!tr) return;
     var idx = findIndex(tr.dataset.id);
@@ -435,7 +468,7 @@ function bindEvents() {
     }
   });
 
-  body.addEventListener("change", async function (e) {
+  if (body) body.addEventListener("change", async function (e) {
     var tr = e.target.closest("tr[data-id]");
     if (!tr) return;
     var idx = findIndex(tr.dataset.id);
@@ -522,7 +555,7 @@ function bindEvents() {
     }
   });
 
-  body.addEventListener("click", function (e) {
+  if (body) body.addEventListener("click", function (e) {
     var copyBtn = e.target.closest(".copy-btn");
     if (copyBtn) { copyText(copyBtn.dataset.copy); return; }
 
@@ -774,6 +807,7 @@ function startRealtime() {
     .channel("product-tool")
     .on("postgres_changes", { event: "*", schema: "public", table: "product_items" }, onRemote)
     .on("postgres_changes", { event: "*", schema: "public", table: "product_lists" }, onRemote)
+    .on("postgres_changes", { event: "*", schema: "public", table: "product_registrations" }, onRemote)
     .on("postgres_changes", { event: "*", schema: "public", table: "app_settings" }, onSettings)
     .subscribe(function (status) {
       if (status === "SUBSCRIBED") UI.setSync("실시간 동기화 중", "ok");
