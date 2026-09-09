@@ -18,21 +18,18 @@ var State = {
   registrations: {}      // item id -> { retail: {...}, wholesale: {...} } 몰별 등록 상태
 };
 
-/* 숨기거나 다시 표시할 수 있는 열 (체크·순번·관리 열은 제외) */
+/* 숨기거나 다시 표시할 수 있는 열 (상태·자동화 열은 의도적으로 제외) */
 var HIDEABLE_COLS = [
   { key: "brand", label: "브랜드" },
-  { key: "name_own", label: "상품명 · 자사몰" },
-  { key: "name_naver", label: "상품명 · 네이버" },
+  { key: "name_own", label: "상품명" },
   { key: "model", label: "모델명" },
   { key: "need_retail", label: "등록 필요 · 소매몰" },
   { key: "need_wholesale", label: "등록 필요 · 도매몰" },
   { key: "need_naver", label: "등록 필요 · 네이버" },
-  { key: "price_retail_regular", label: "가격 · 소매몰 정가" },
-  { key: "price_retail", label: "가격 · 소매몰 판매가(도매몰 정가)" },
-  { key: "price_wholesale", label: "가격 · 도매몰(베이직)" },
-  { key: "price_wholesale_master", label: "가격 · 도매몰(마스터)" },
+  { key: "price_retail", label: "가격 · 소매몰 판매가" },
+  { key: "price_wholesale", label: "가격 · 도매몰 베이직" },
+  { key: "price_wholesale_master", label: "가격 · 도매몰 마스터" },
   { key: "price_naver", label: "가격 · 네이버" },
-  { key: "image", label: "이미지" },
   { key: "ref_link", label: "참고 링크" },
   { key: "note", label: "비고" }
 ];
@@ -53,6 +50,7 @@ var NEED_OPTIONS = ["필요", "불필요"];
 
 /* 새 행을 추가할 때 미리 채워지는 값 */
 var DEFAULT_NEED = "필요";
+var DEFAULT_NAVER_NEED = "불필요";
 
 /* 새 행 기본값 */
 function makeItem(seq) {
@@ -66,12 +64,13 @@ function makeItem(seq) {
     content: "",                 // 이전 데이터 보존용. 화면과 내보내기에서는 더 이상 사용하지 않습니다.
     need_retail: DEFAULT_NEED,
     need_wholesale: DEFAULT_NEED,
-    need_naver: DEFAULT_NEED,
+    need_naver: DEFAULT_NAVER_NEED,
     price_retail_regular: null,  // 소매몰 정가
     price_retail: null,          // 소매몰 판매가 · 도매몰 정가
     price_wholesale: null,          // 도매몰 · 베이직
     price_wholesale_master: null,   // 도매몰 · 마스터
     price_naver: null,
+    link_np: true,                // 구버전 데이터와의 호환용. 새 화면에서는 항상 소매 판매가와 연동합니다.
     image_url: "",
     automation: AutomationCore.normalize({}),
     ref_link: "",
@@ -85,7 +84,7 @@ function makeItem(seq) {
 var COPY_FIELDS = [
   "brand", "name_own", "name_naver", "model", "content",
   "need_retail", "need_wholesale", "need_naver",
-  "price_retail_regular", "price_retail", "price_wholesale", "price_wholesale_master", "price_naver",
+  "price_retail_regular", "price_retail", "price_wholesale", "price_wholesale_master", "price_naver", "link_np",
   "image_url", "ref_link", "note"
 ];
 function copyItem(src) {

@@ -6,6 +6,26 @@ var AutomationCore = (function () {
   function slug(v) { return String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
   /* 브랜드 비교 키: 대소문자·공백·기호 차이를 무시합니다. (TILTA = tilta = Tilta-) */
   function brandKey(v) { return String(v || '').toLowerCase().replace(/[^a-z0-9\u3131-\u318e\uac00-\ud7a3]/g, ''); }
+  function hangulInitials(v) {
+    var initials = [0x3131, 0x3132, 0x3134, 0x3137, 0x3138, 0x3139, 0x3141, 0x3142, 0x3143, 0x3145, 0x3146, 0x3147, 0x3148, 0x3149, 0x314a, 0x314b, 0x314c, 0x314d, 0x314e];
+    return Array.from(String(v || '')).map(function (ch) {
+      var code = ch.charCodeAt(0) - 0xAC00;
+      if (code < 0 || code > 11171) return ch;
+      return String.fromCharCode(initials[Math.floor(code / 588)]);
+    }).join('');
+  }
+  function brandSearchText(brand) {
+    brand = brand || {};
+    var aliases = Array.isArray(brand.aliases) ? brand.aliases : [];
+    var text = [brand.name, brand.code].concat(aliases).filter(Boolean).join(' ');
+    return text + ' ' + hangulInitials(brand.name) + ' ' + aliases.map(hangulInitials).join(' ');
+  }
+  function brandMatches(brand, query) {
+    var q = String(query || '').trim().toLowerCase();
+    if (!q) return true;
+    return brandKey(brandSearchText(brand)).indexOf(brandKey(q)) > -1 ||
+      hangulInitials(brandSearchText(brand)).indexOf(q.replace(/\s/g, '')) > -1;
+  }
   /* 입력 문자열과 같은 브랜드를 목록에서 찾습니다. 없으면 null. */
   function matchBrand(brands, text) {
     var key = brandKey(text);
@@ -21,6 +41,7 @@ var AutomationCore = (function () {
     a.categoryCodes = Object.assign({ retail: '', wholesale: '' }, a.categoryCodes);
     a.detailImages = Array.isArray(a.detailImages) ? a.detailImages : [];
     a.generator = Object.assign({ brand: '', product: '', folder: '', extension: 'jpg', count: 1 }, a.generator);
+    a.naverNameMode = a.naverNameMode === 'manual' ? 'manual' : 'auto';
     a.origin = typeof a.origin === 'string' ? a.origin.trim() : '';
     a.schemaVersion = 1;
     return a;
@@ -107,6 +128,11 @@ var AutomationCore = (function () {
       if (!name || name.length > 30 || name !== b.name) throw new Error('브랜드 이름은 1~30자이며 앞뒤 공백이 없어야 합니다.');
       if (brandKeys.has(brandKey(name))) throw new Error('"' + name + '" 브랜드가 이미 있습니다. 대소문자·공백만 다른 이름도 같은 브랜드로 봅니다.');
       brandKeys.add(brandKey(name));
+      if (b.aliases !== undefined) {
+        if (!Array.isArray(b.aliases) || b.aliases.some(function (alias) { return typeof alias !== 'string' || alias.trim() !== alias || alias.length > 30; })) {
+          throw new Error('브랜드 한글 검색 별칭을 확인해 주세요.');
+        }
+      }
       if (code) {
         if (!/^[A-Za-z0-9_-]{1,20}$/.test(code) || code !== b.code) throw new Error('브랜드 코드는 20자 이내의 영문·숫자·대시·밑줄입니다.');
         if (brandCodes.has(code)) throw new Error('브랜드 코드 ' + code + '이(가) 중복됩니다.');
@@ -133,6 +159,6 @@ var AutomationCore = (function () {
     });
     return s;
   }
-  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
+  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, hangulInitials: hangulInitials, brandSearchText: brandSearchText, brandMatches: brandMatches, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
 })();
 if (typeof module !== 'undefined') module.exports = AutomationCore;

@@ -105,6 +105,13 @@ test('brand list: initial data, case/space-insensitive matching, and duplicate/f
  s.brands.pop();s.brands.push({code:'',name:'한글 브랜드',active:false});C.validateSettings(s);
  const legacy={categories:{retail:[],wholesale:[]},folders:[]};C.validateSettings(legacy);assert.deepEqual(legacy.brands,[]);
 });
+test('brand search supports aliases and Hangul initials',()=>{
+ const b={code:'086001',name:'CONNECTER',aliases:['커넥터'],active:true};
+ assert.equal(C.brandMatches(b,'커넥터'),true);
+ assert.equal(C.brandMatches(b,'ㅋㄴㅌ'),true);
+ assert.equal(C.brandMatches(b,'086001'),true);
+ assert.equal(C.brandMatches(b,'없는 브랜드'),false);
+});
 test('export marks registered brands and strips transient UI flags',()=>{
  const row={id:'b',brand:'tilta',brand_custom:false,link_np:true,content:'legacy',name_own:'상품',price_retail_regular:500000,need_retail:'불필요',need_wholesale:'불필요',automation:{}};
  const out=C.exportItem(row,settings);

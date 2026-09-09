@@ -29,7 +29,7 @@
   function brandFind(key){return brandsOf().find(function(b){return AutomationCore.brandKey(b.name)===key;});}
   function brandTree(){
     var q=byId('brandSearch').value.toLowerCase();
-    var rows=brandsOf().slice().sort(function(a,b){return a.name.localeCompare(b.name,'en',{sensitivity:'base'});}).filter(function(b){return !q || (b.name+' '+(b.code||'')).toLowerCase().includes(q);});
+    var rows=brandsOf().slice().sort(function(a,b){return a.name.localeCompare(b.name,'en',{sensitivity:'base'});}).filter(function(b){return !q || AutomationCore.brandMatches(b,q);});
     var active=brandsOf().filter(function(b){return b.active!==false;}).length;
     byId('brandCount').textContent=brandsOf().length+'개 브랜드 · 선택 가능 '+active+'개';
     byId('brandList').innerHTML=rows.map(function(b){var key=AutomationCore.brandKey(b.name);return '<button class="category-node'+(key===brandSelected?' is-active':'')+'" data-brand="'+esc(key)+'" style="--depth:0"><span>'+esc(b.name)+'</span><code>'+esc(b.code||'')+'</code><small>'+(b.active===false?'사용 중지':'')+'</small></button>';}).join('') || '<p class="empty-hint">'+(q?'검색 결과가 없습니다.':'등록된 브랜드가 없습니다.')+'</p>';
@@ -39,6 +39,7 @@
     byId('brandFormTitle').textContent=chosen?'브랜드 수정':'브랜드 추가';
     byId('brandName').value=chosen?chosen.name:'';
     byId('brandCode').value=chosen?(chosen.code||''):'';
+    byId('brandAliases').value=chosen?(chosen.aliases||[]).join(', '):'';
     byId('brandActive').checked=!chosen || chosen.active!==false;
     byId('deleteBrand').hidden=!chosen;
     formDirty=false;
@@ -46,7 +47,8 @@
   function applyBrand(){
     if(!byId('brandForm').reportValidity())return false;
     var candidate=AutomationCore.clone(config),rows=brandsOf(candidate);
-    var value={code:byId('brandCode').value.trim(),name:byId('brandName').value.trim(),active:byId('brandActive').checked};
+    var aliases=byId('brandAliases').value.split(',').map(function(v){return v.trim();}).filter(Boolean);
+    var value={code:byId('brandCode').value.trim(),name:byId('brandName').value.trim(),aliases:aliases,active:byId('brandActive').checked};
     var old=brandSelected?rows.find(function(b){return AutomationCore.brandKey(b.name)===brandSelected;}):null;
     if(old)Object.assign(old,value);else rows.push(value);
     try{AutomationCore.validateSettings(candidate);}catch(e){toast(e.message,'error');return false;}
@@ -64,9 +66,9 @@
     var candidate=AutomationCore.clone(config);candidate.brands=candidate.brands.filter(function(b){return AutomationCore.brandKey(b.name)!==brandSelected;});
     config=candidate;brandSelected=null;mark();brandTree();brandPopulate();toast('삭제를 반영했습니다. 상단에서 설정을 저장하세요.');
   });
-  function currentTab(){var b=document.querySelector('[data-settings-tab].is-active');return b?b.dataset.settingsTab:'brands';}
+  function currentTab(){var b=document.querySelector('.settings-tabs [data-settings-tab].is-active');return b?b.dataset.settingsTab:'brands';}
   function leaveForm(){return !formDirty || confirm('아직 변경 반영하지 않은 입력이 있습니다. 입력을 버리고 이동할까요?');}
-  document.querySelectorAll('[data-settings-tab]').forEach(function(b){b.addEventListener('click',function(){
+  document.querySelectorAll('.settings-tabs [data-settings-tab]').forEach(function(b){b.addEventListener('click',function(){
     if(!config || saving || !leaveForm())return;
     var tab=b.dataset.settingsTab;document.querySelectorAll('[data-settings-tab]').forEach(function(n){n.classList.toggle('is-active',n===b);});
     byId('brandSettings').hidden=tab!=='brands';byId('categorySettings').hidden=tab==='folders' || tab==='brands';byId('folderSettings').hidden=tab!=='folders';
@@ -99,7 +101,7 @@
     catch(err){byId('settingsState').textContent='저장 실패';byId('settingsError').hidden=false;byId('settingsError').textContent=err.message;toast('설정 저장에 실패했습니다. 입력 내용은 유지됩니다.','error');}
     finally{saving=false;byId('saveSettings').disabled=!dirty;document.querySelector('main').inert=false;}
   });
-  document.querySelectorAll('[data-route]').forEach(function(a){a.href='../'+a.dataset.route+'/'+location.search;a.addEventListener('click',function(e){if(saving || ((dirty || formDirty) && !confirm('저장하지 않은 설정이 있습니다. 저장하지 않고 이동할까요?'))){e.preventDefault();return;}dirty=false;formDirty=false;});});
+  document.querySelectorAll('[data-route]').forEach(function(a){a.href=a.dataset.route==='settings'&&a.dataset.settingsTab?'../settings/?tab='+encodeURIComponent(a.dataset.settingsTab):'../'+a.dataset.route+'/';a.addEventListener('click',function(e){if(saving || ((dirty || formDirty) && !confirm('저장하지 않은 설정이 있습니다. 저장하지 않고 이동할까요?'))){e.preventDefault();return;}dirty=false;formDirty=false;});});
   window.addEventListener('beforeunload',function(e){if(dirty || formDirty){e.preventDefault();e.returnValue='';}});
-  (async function(){try{var row=await Api.fetchAutomationSettings();config=AutomationCore.normalizeSettings(row.value);revision=row.updated_at;brandTree();brandPopulate();tree();populate();byId('settingsState').textContent='저장된 설정';document.querySelector('main').inert=false;}catch(e){byId('settingsState').textContent='불러오기 실패';byId('settingsError').hidden=false;byId('settingsError').textContent='설정을 불러오지 못했습니다. '+e.message;document.querySelectorAll('main input, main button, main select').forEach(function(el){el.disabled=true;});}})();
+  (async function(){try{var row=await Api.fetchAutomationSettings();config=AutomationCore.normalizeSettings(row.value);revision=row.updated_at;brandTree();brandPopulate();tree();populate();var initialTab=new URLSearchParams(location.search).get('tab');if(initialTab==='categories')initialTab='retail';var initial=document.querySelector('.settings-tabs [data-settings-tab="'+(initialTab||'brands')+'"]');if(initial)initial.click();byId('settingsState').textContent='저장된 설정';document.querySelector('main').inert=false;}catch(e){byId('settingsState').textContent='불러오기 실패';byId('settingsError').hidden=false;byId('settingsError').textContent='설정을 불러오지 못했습니다. '+e.message;document.querySelectorAll('main input, main button, main select').forEach(function(el){el.disabled=true;});}})();
 })();
