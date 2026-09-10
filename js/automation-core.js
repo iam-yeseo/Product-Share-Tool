@@ -52,6 +52,16 @@ var AutomationCore = (function () {
     });
   }
   function hasMarkup(value) { return /<[a-zA-Z/!][^>]*>/.test(String(value == null ? '' : value)); }
+  /* 스마트스토어 상품명 자동 규칙: `/` 를 공백 한 칸으로 바꾸고 연속 공백을 하나로 정리합니다.
+     상품명 HTML 원문에는 `</font>` 처럼 `/` 가 들어 있으므로, 읽기용 텍스트를 먼저 뽑고 규칙을 적용합니다.
+     원문 자체는 그대로 보존되고 여기서 만든 값은 name_naver 에만 쓰입니다. */
+  function smartName(value) {
+    return displayName(value).replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
+  }
+  /* 직접 입력 중에는 `/` 만 공백으로 바꾸고 나머지 입력은 건드리지 않습니다. (타이핑 방해 방지) */
+  function smartNameInput(value) {
+    return String(value == null ? '' : value).replace(/\//g, ' ');
+  }
   function displayName(value) {
     var raw = String(value == null ? '' : value);
     if (raw.indexOf('<') === -1 && raw.indexOf('&') === -1) return raw;
@@ -196,6 +206,6 @@ var AutomationCore = (function () {
     });
     return s;
   }
-  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, hangulInitials: hangulInitials, brandSearchText: brandSearchText, brandMatches: brandMatches, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, generatorValues: generatorValues, displayName: displayName, hasMarkup: hasMarkup, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
+  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, hangulInitials: hangulInitials, brandSearchText: brandSearchText, brandMatches: brandMatches, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, generatorValues: generatorValues, displayName: displayName, hasMarkup: hasMarkup, smartName: smartName, smartNameInput: smartNameInput, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
 })();
 if (typeof module !== 'undefined') module.exports = AutomationCore;

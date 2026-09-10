@@ -91,7 +91,7 @@ var Workspace = (function () {
     return found[2];
   }
 
-  function smartName(value) { return String(value || '').replace(/\//g, ''); }
+  function smartName(value) { return AutomationCore.smartName(value); }
   function smartNameMode(it) {
     var a = AutomationCore.normalize(it.automation);
     if (a.naverNameMode === 'manual') return 'manual';
@@ -104,7 +104,7 @@ var Workspace = (function () {
       '<input data-product-field="name_naver" data-naver-input value="' + esc(value) + '" placeholder="상품명을 입력하면 자동으로 변환됩니다." maxlength="120"' + (ro || mode === 'auto' ? ' readonly' : '') + '>' +
       '<div class="name-meta-row"><label class="check-line check-line-sm"><input type="checkbox" data-naver-mode' + (mode === 'manual' ? ' checked' : '') + (ro ? ' disabled' : '') + '><span>직접 입력</span></label>' +
       '<span class="char-count" data-naver-count></span></div>' +
-      '<span class="field-note">자동 모드는 상품명의 `/`만 제거하며 50자를 넘어도 자동으로 자르지 않습니다.</span></div>';
+      '<span class="field-note">자동 모드는 상품명의 `/`를 공백 한 칸으로 바꾸며 50자를 넘어도 자동으로 자르지 않습니다.</span></div>';
   }
 
   function priceField(label, field, value, ro, options) {
@@ -168,7 +168,7 @@ var Workspace = (function () {
       it[field] = toNumberOrNull(input.value);
       if (field === 'price_retail' && it.link_np !== false) it.price_naver = it.price_retail;
     } else if (field === 'name_naver') {
-      it.name_naver = smartName(input.value);
+      it.name_naver = AutomationCore.smartNameInput(input.value);
       if (input.dataset.naverInput) it.automation = AutomationCore.normalize(Object.assign({}, it.automation, { naverNameMode: 'manual' }));
     } else {
       it[field] = input.value;

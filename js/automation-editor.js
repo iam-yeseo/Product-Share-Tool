@@ -43,6 +43,18 @@ var AutomationEditor = (function () {
     document.body.classList.toggle('modal-open', open);
   }
   function openDialog(dialog) { if (!dialog) return; dialog.classList.remove('is-closing'); if (!dialog.open) dialog.showModal(); syncScrollLock(); }
+  /* 상품 모달 높이를 '기본 설정' 탭 높이로 고정해, 탭을 바꿔도 모달이 커지거나 줄지 않게 합니다. */
+  function lockProductHeight() {
+    var dialog = document.getElementById('automationDialog');
+    if (!dialog || !dialog.open || activeTab !== 'default') return;
+    dialog.style.removeProperty('--product-modal-h');
+    var height = Math.round(dialog.getBoundingClientRect().height);
+    if (height) dialog.style.setProperty('--product-modal-h', height + 'px');
+  }
+  function unlockProductHeight() {
+    var dialog = document.getElementById('automationDialog');
+    if (dialog) dialog.style.removeProperty('--product-modal-h');
+  }
   /* 닫기 애니메이션이 실제로 재생된 뒤에 dialog 를 닫습니다. */
   function closeDialog(dialog, after) {
     if (!dialog || !dialog.open) { if (after) after(); syncScrollLock(); return; }
@@ -152,6 +164,7 @@ var AutomationEditor = (function () {
       tab.setAttribute('aria-selected', String(on));
     });
     var saveButton = document.getElementById('autoSave'); if (saveButton) saveButton.textContent = isNew ? '상품 등록' : '수정 완료';
+    if (typeof Motion !== 'undefined') Motion.segTabs(document.getElementById('productTabs'), true);
     if (activeTab === 'images') renderImagesTab(); else renderBasic();
     /* 하위 모달을 닫고 돌아와도 본문 스크롤 위치를 유지합니다. */
     if (body) body.scrollTop = keepScroll;
@@ -227,6 +240,8 @@ var AutomationEditor = (function () {
     lastFocus = document.activeElement;
     render();
     openDialog(document.getElementById('automationDialog'));
+    lockProductHeight();
+    if (typeof Motion !== 'undefined') Motion.segTabs(document.getElementById('productTabs'), false);
   }
   function openNew(item) {
     if (!settings) { toast(settingsError || '자동화 설정을 불러오지 못했습니다. 페이지를 새로고침해 주세요.', 'error'); return; }
@@ -239,6 +254,8 @@ var AutomationEditor = (function () {
     lastFocus = document.activeElement;
     render();
     openDialog(document.getElementById('automationDialog'));
+    lockProductHeight();
+    if (typeof Motion !== 'undefined') Motion.segTabs(document.getElementById('productTabs'), false);
   }
   function discardPending(id) { var item = pending.get(id); if (item) { URL.revokeObjectURL(item.preview); pending.delete(id); } thumbnailChecks.delete(id); }
   function restoreFocus() {
@@ -247,6 +264,7 @@ var AutomationEditor = (function () {
   }
   function closeDiscard() {
     if (isNew) discardPending(activeId);
+    unlockProductHeight();
     closeDialog(document.getElementById('automationDialog'), function () {
       activeId = null; activeOriginal = null; draft = null; isNew = false; choice = null;
       restoreFocus();
@@ -259,6 +277,8 @@ var AutomationEditor = (function () {
     var index = State.items.findIndex(function (candidate) { return candidate.id === item.id; });
     if (index === -1) { State.items.push(item); State.baseItemIds[item.id] = false; } else State.items[index] = item;
     setDirty(true); UI.renderGrid();
+    if (typeof Motion !== 'undefined') Motion.flashRow(item.id);
+    unlockProductHeight();
     closeDialog(document.getElementById('automationDialog'), function () {
       activeId = null; activeOriginal = null; draft = null; isNew = false; choice = null;
       restoreFocus();
@@ -430,7 +450,7 @@ var AutomationEditor = (function () {
         activeTab = tab.dataset.productTab;
         var body = document.getElementById('autoBody');
         render();
-        if (body) { body.scrollTop = 0; body.classList.remove('is-switching'); void body.offsetWidth; body.classList.add('is-switching'); }
+        if (body) { body.scrollTop = 0; if (typeof Motion !== 'undefined') Motion.enter(body); }
       });
     });
     document.getElementById('autoCancel').addEventListener('click', closeDiscard);
@@ -569,6 +589,10 @@ var AutomationEditor = (function () {
 
   async function init() {
     bind();
+    window.addEventListener('resize', function () {
+      var dialog = document.getElementById('automationDialog');
+      if (dialog && dialog.open && activeTab === 'default') lockProductHeight();
+    });
     try { settings = (await Api.fetchAutomationSettings()).value; settingsError = ''; }
     catch (error) { settingsError = error.message || String(error); toast('자동화 설정 불러오기 실패: ' + settingsError, 'error'); }
   }
