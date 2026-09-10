@@ -1,53 +1,83 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>설정 · CALLTO</title>
-<link rel="stylesheet" href="../css/style.css"><link rel="stylesheet" href="../css/automation.css">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/automation.css">
 </head>
 <body class="settings-page" data-page="settings">
 <header class="gnb">
-  <div class="gnb-left"><a class="brand-lockup" href="../edit/"><img src="../assets/callto-logo.svg" alt="CALLTO"><span>CALLTO</span></a></div>
-  <nav class="gnb-nav" aria-label="페이지"><a class="gnb-link" data-route="edit" href="../edit/">상품 리스트</a><a class="gnb-link is-active" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 설정</a><a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">카테고리 설정</a></nav>
+  <div class="gnb-left"><a class="brand-lockup" href="../edit/"><img src="../assets/callto-logo.svg" alt=""><span>CALLTO</span></a></div>
+  <nav class="gnb-nav" aria-label="주요 화면">
+    <a class="gnb-link" data-route="edit" href="../edit/">상품 리스트</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 설정</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">카테고리 설정</a>
+  </nav>
   <div class="gnb-right"><span id="settingsState" class="sync-state">불러오는 중…</span><button id="saveSettings" class="btn btn-primary" disabled>설정 저장</button></div>
 </header>
 
 <main class="settings-main" inert>
-  <section class="settings-intro"><p class="eyebrow">CALLTO 설정</p><h1>브랜드·카테고리 설정</h1><p>상품 등록 모달에서 사용하는 브랜드 별칭과 몰별 카테고리를 관리합니다. 저장한 설정은 모든 사용자에게 공유됩니다.</p></section>
+  <section class="settings-intro">
+    <h1 id="settingsTitle">설정</h1>
+    <p id="settingsLead">저장한 설정은 모든 사용자에게 공유됩니다.</p>
+  </section>
   <div id="settingsError" class="settings-error" hidden></div>
-  <div class="settings-tabs" role="group" aria-label="설정 항목"><button class="btn is-active" data-settings-tab="brands">브랜드</button><button class="btn" data-settings-tab="retail">소매몰 카테고리</button><button class="btn" data-settings-tab="wholesale">도매몰 카테고리</button><button class="btn" data-settings-tab="folders">이미지 폴더</button></div>
 
-  <section id="brandSettings" class="settings-card">
-    <div class="section-title"><div><h2>브랜드</h2><p id="brandCount" class="field-note"></p></div><input id="brandSearch" type="search" placeholder="이름·코드·한글 별칭·초성 검색" aria-label="브랜드 검색"></div>
+  <div class="settings-tabs" id="categoryTabs" role="tablist" aria-label="카테고리 설정 항목" hidden>
+    <button class="seg-tab" type="button" role="tab" data-cat-tab="retail" aria-selected="false">소비자몰 카테고리</button>
+    <button class="seg-tab" type="button" role="tab" data-cat-tab="wholesale" aria-selected="false">도매몰 카테고리</button>
+    <button class="seg-tab" type="button" role="tab" data-cat-tab="folders" aria-selected="false">이미지 폴더</button>
+  </div>
+
+  <div id="settingsLoading" class="settings-card settings-loading">설정을 불러오는 중입니다…</div>
+
+  <section id="brandSettings" class="settings-card" hidden>
+    <div class="section-title"><div><h2>브랜드</h2><p id="brandCount" class="field-note"></p></div><input id="brandSearch" type="search" placeholder="이름·코드·한글 검색명·초성 검색" aria-label="브랜드 검색"></div>
     <p class="field-note">등록된 브랜드는 상품 모달에서 선택할 수 있습니다. 목록에 없는 브랜드는 상품별로 직접 입력할 수 있습니다.</p>
     <div class="settings-columns"><div id="brandList" class="category-tree" aria-label="브랜드 목록"></div><form id="brandForm" class="category-form">
       <h3 id="brandFormTitle">브랜드 추가</h3>
       <label class="field">브랜드 이름<input id="brandName" required maxlength="30" placeholder="TILTA"><span class="field-note">고도몰 브랜드명과 같게 입력합니다.</span></label>
       <label class="field">브랜드 코드<input id="brandCode" maxlength="20" pattern="[A-Za-z0-9_\-]{1,20}" placeholder="165"><span class="field-note">고도몰 브랜드 코드(선택 입력)입니다.</span></label>
-      <label class="field">한글 검색 별칭<input id="brandAliases" maxlength="300" placeholder="틸타, 카메라 리그"><span class="field-note">쉼표로 구분하면 이름·코드와 함께 검색됩니다. 초성 검색도 지원합니다.</span></label>
-      <label><input id="brandActive" type="checkbox" checked> 새 상품에서 선택 가능</label>
-      <div class="action-row"><button class="btn btn-primary" type="submit">변경 반영</button><button class="btn" id="newBrand" type="button">새 브랜드</button><button class="btn btn-danger-ghost" id="deleteBrand" type="button" hidden>삭제</button></div>
+      <label class="field">한글 검색명<input id="brandAliases" maxlength="300" placeholder="록스톤, 틸타"><span class="field-note">쉼표로 구분하면 이름·코드와 함께 검색됩니다. 초성은 자동으로 계산합니다. 검색명은 실제 브랜드명과 자동화 코드에 영향을 주지 않습니다.</span></label>
+      <label class="check-line"><input id="brandActive" type="checkbox" checked><span>새 상품에서 선택 가능</span></label>
+      <div class="action-row"><button class="btn btn-primary" type="submit">변경 반영</button><button class="btn btn-neutral" id="newBrand" type="button">새 브랜드</button><button class="btn btn-danger-ghost" id="deleteBrand" type="button" hidden>삭제</button></div>
       <p class="field-note">변경 반영 후 상단 설정 저장을 눌러야 다른 사용자에게 적용됩니다.</p>
     </form></div>
   </section>
 
   <section id="categorySettings" class="settings-card" hidden>
-    <div class="section-title"><div><h2 id="categoryHeading">소매몰 카테고리</h2><p id="categoryCount" class="field-note"></p></div><input id="categorySearch" type="search" placeholder="이름 또는 코드 검색" aria-label="카테고리 검색"></div>
+    <div class="section-title"><div><h2 id="categoryHeading">소비자몰 카테고리</h2><p id="categoryCount" class="field-note"></p></div><input id="categorySearch" type="search" placeholder="이름 또는 코드 검색" aria-label="카테고리 검색"></div>
     <div class="settings-columns"><div id="categoryTree" class="category-tree" aria-label="카테고리 목록"></div><form id="categoryForm" class="category-form">
       <h3 id="categoryFormTitle">카테고리 추가</h3>
       <label class="field">상위 카테고리<select id="categoryParent"></select></label>
       <label class="field">카테고리 이름<input id="categoryName" required maxlength="100" placeholder="오디오 믹서"></label>
       <label class="field">카테고리 코드<input id="categoryCode" required inputmode="numeric" pattern="(?:[0-9]{3}){1,4}" placeholder="020001" maxlength="12"><span class="field-note">1~4차 코드는 3·6·9·12자리이며 앞자리 0을 보존합니다.</span></label>
       <label class="field">기본 이미지 폴더<select id="categoryFolder"></select><span class="field-note">미지정 시 상위 카테고리 연결을 따릅니다.</span></label>
-      <label><input id="categoryActive" type="checkbox" checked> 새 상품에서 선택 가능</label>
-      <div class="action-row"><button class="btn btn-primary" type="submit">변경 반영</button><button class="btn" id="newCategory" type="button">새 카테고리</button></div>
+      <label class="check-line"><input id="categoryActive" type="checkbox" checked><span>새 상품에서 선택 가능</span></label>
+      <div class="action-row"><button class="btn btn-primary" type="submit">변경 반영</button><button class="btn btn-neutral" id="newCategory" type="button">새 카테고리</button></div>
     </form></div>
   </section>
 
-  <section id="folderSettings" class="settings-card" hidden><h2>상세 이미지 폴더</h2><p class="field-note">기본 주소: https://calla.hgodo.com/product/<br>이미 저장된 주소는 폴더 설정 변경으로 바뀌지 않습니다.</p><div id="folderList" class="folder-list"></div><form id="folderForm" class="action-row"><input id="newFolderName" placeholder="새 폴더 이름" aria-label="새 폴더 이름" required pattern="[a-z0-9][a-z0-9_\-]*"><button class="btn btn-primary">폴더 추가</button></form></section>
+  <section id="folderSettings" class="settings-card" hidden>
+    <h2>상세 이미지 폴더</h2>
+    <p class="field-note">기본 주소: https://calla.hgodo.com/product/<br>이미 저장된 주소는 폴더 설정 변경으로 바뀌지 않습니다.</p>
+    <div id="folderList" class="folder-list"></div>
+    <form id="folderForm" class="action-row"><input id="newFolderName" placeholder="새 폴더 이름" aria-label="새 폴더 이름" required pattern="[a-z0-9][a-z0-9_\-]*"><button class="btn btn-primary">폴더 추가</button></form>
+  </section>
+
   <p class="field-note">변경 반영 후 상단의 <b>설정 저장</b>을 눌러야 공유됩니다.</p>
 </main>
-<div id="toast" class="toast" hidden></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0"></script><script src="../js/supabaseClient.js"></script><script src="../js/utils.js"></script><script src="../js/automation-core.js"></script><script src="../js/brand-defaults.js"></script><script src="../js/api.js"></script><script src="../js/settings.js"></script>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0"></script>
+<script src="../js/supabaseClient.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/automation-core.js"></script>
+<script src="../js/brand-defaults.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/settings.js"></script>
 </body>
 </html>

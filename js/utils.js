@@ -86,15 +86,21 @@ function uuid() {
   });
 }
 
-/* 토스트 알림 */
+/* 토스트 알림 — 등장뿐 아니라 퇴장 전환도 실제로 재생합니다. */
 var _toastTimer = null;
+var _toastHideTimer = null;
 function toast(msg, kind) {
   var el = document.getElementById("toast");
-  el.textContent = msg;
-  el.className = "toast" + (kind ? " toast-" + kind : "");
-  el.hidden = false;
+  if (!el) return;
   clearTimeout(_toastTimer);
-  _toastTimer = setTimeout(function () { el.hidden = true; }, 2200);
+  clearTimeout(_toastHideTimer);
+  el.className = "toast" + (kind ? " toast-" + kind : "");
+  el.textContent = msg;
+  el.hidden = false;
+  _toastTimer = setTimeout(function () {
+    el.classList.add("is-leaving");
+    _toastHideTimer = setTimeout(function () { el.hidden = true; el.classList.remove("is-leaving"); }, 200);
+  }, 2400);
 }
 
 /* 클립보드 복사 (구형 브라우저 폴백 포함) */

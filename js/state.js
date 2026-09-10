@@ -23,14 +23,14 @@ var HIDEABLE_COLS = [
   { key: "brand", label: "브랜드" },
   { key: "name_own", label: "상품명" },
   { key: "model", label: "모델명" },
-  { key: "need_retail", label: "등록 필요 · 소매몰" },
-  { key: "need_wholesale", label: "등록 필요 · 도매몰" },
+  { key: "need_retail", label: "등록 필요 · 소매" },
+  { key: "need_wholesale", label: "등록 필요 · 도매" },
   { key: "need_naver", label: "등록 필요 · 네이버" },
-  { key: "price_retail", label: "가격 · 소매몰 판매가" },
-  { key: "price_wholesale", label: "가격 · 도매몰 베이직" },
-  { key: "price_wholesale_master", label: "가격 · 도매몰 마스터" },
+  { key: "price_retail", label: "가격 · 소매" },
+  { key: "price_wholesale", label: "가격 · 도매(베이직)" },
+  { key: "price_wholesale_master", label: "가격 · 도매(마스터)" },
   { key: "price_naver", label: "가격 · 네이버" },
-  { key: "ref_link", label: "참고 링크" },
+  { key: "ref_link", label: "참고링크" },
   { key: "note", label: "비고" }
 ];
 
