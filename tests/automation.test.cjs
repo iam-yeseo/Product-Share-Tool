@@ -158,3 +158,30 @@ test('settings without a brands key fall back to the built-in defaults; an expli
  assert.equal((await api({...C.clone(legacy),brands:[]},true)).value.brands.length,0);
  assert.equal((await api({...C.clone(legacy),brands:[{code:'',name:'Only',active:true}]},true)).value.brands[0].name,'Only');
 });
+test('product names keep their HTML source while the list shows readable text',()=>{
+ const raw='<font color="#ff0000">빨강</font> 스피커 &amp; 마이크';
+ assert.equal(C.displayName(raw),'빨강 스피커 & 마이크');
+ assert.equal(C.hasMarkup(raw),true);
+ assert.equal(C.displayName('<img src=x onerror="alert(1)">이름'),'이름');
+ assert.equal(C.displayName('<script>alert(1)</script>이름'),'이름');
+ assert.equal(C.displayName('일반 상품명'),'일반 상품명');
+ assert.equal(C.hasMarkup('일반 상품명'),false);
+ assert.equal(C.displayName('A &lt;b&gt; B'),'A <b> B');
+ assert.equal(C.displayName(null),'');
+ const row={id:'x',name_own:raw,name_naver:raw,need_retail:'불필요',need_wholesale:'불필요',automation:{}};
+ const out=C.exportItem(row,settings);
+ assert.equal(out.name_own,raw);
+ assert.equal(out.name_naver,raw);
+});
+test('image address generation follows product info until 직접 입력 overrides it',()=>{
+ const item={brand:'ROXTONE',model:'PSS130',automation:{generator:{folder:'audio',extension:'jpg',count:1}}};
+ assert.equal(C.generate(C.generatorValues(item))[0].filename,'roxtone-pss130.jpg');
+ item.automation.generator.brandManual=true;item.automation.generator.brand='rox';
+ assert.equal(C.generate(C.generatorValues(item))[0].filename,'rox-pss130.jpg');
+ item.brand='NEW BRAND';
+ assert.equal(C.generate(C.generatorValues(item))[0].filename,'rox-pss130.jpg');
+ const legacy=C.normalize({generator:{brand:'tilta',product:'t1'}});
+ assert.equal(legacy.generator.brandManual,true);assert.equal(legacy.generator.productManual,true);
+ const fresh=C.normalize({});
+ assert.equal(fresh.generator.brandManual,false);assert.equal(fresh.generator.productManual,false);
+});

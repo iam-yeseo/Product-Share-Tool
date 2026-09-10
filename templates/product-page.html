@@ -1,19 +1,207 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{{TITLE}} · CALLTO</title><link rel="stylesheet" href="../css/style.css"><link rel="stylesheet" href="../css/automation.css"></head>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{TITLE}} · CALLTO</title>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/automation.css">
+</head>
 <body class="{{BODY_CLASS}}" data-page="{{PAGE}}">
-<header class="gnb"><div class="gnb-left"><button id="btnSidebar" class="icon-btn" title="목록 열기 / 접기" aria-label="목록 열기 / 접기">☰</button><a class="brand-lockup" href="../edit/"><img src="../assets/callto-logo.svg" alt="CALLTO"><span>CALLTO</span></a></div><nav class="gnb-nav" aria-label="페이지"><a class="gnb-link" data-route="edit" href="../edit/">상품 리스트</a><a class="gnb-link" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 설정</a><a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">카테고리 설정</a></nav><div class="gnb-right"><span id="syncState" class="sync-state">연결 중…</span><span id="dirtyBadge" class="dirty-badge" hidden>저장 안 됨</span><button id="btnSave" class="btn btn-primary only-editor" disabled>저장하기</button></div></header>
-<div class="layout"><aside class="sidebar" id="sidebar"><div class="side-top"><button id="btnNewList" class="only-editor btn btn-primary btn-block">+ 새 리스트</button><label class="search-box"><span class="sr-only">리스트 검색</span><input id="searchInput" type="search" placeholder="리스트 검색" autocomplete="off"></label></div><nav id="listNav" class="list-nav"><p class="empty-hint">불러오는 중…</p></nav></aside><div class="sidebar-dim" id="sidebarDim"></div><main class="main">
-<section id="emptyState" class="empty-state"><div class="empty-icon" aria-hidden="true">＋</div><h1>리스트를 선택하세요</h1><p>왼쪽에서 리스트를 선택하거나 새 리스트를 만들어 상품을 등록하세요.</p></section>
-<section id="listPane" hidden><div class="list-head"><div class="list-title-line"><div><p class="eyebrow">상품 리스트</p><h1 id="listTitleDisplay" class="title-display">제목 없는 리스트</h1><div class="list-meta-line"><span id="listDateRO">—</span><span class="dot">·</span><span>생성 <b id="listCreated">—</b></span><span class="dot">·</span><span>수정 <b id="listUpdated">—</b></span></div></div><button id="btnListInfo" class="btn btn-outline only-editor">리스트 정보</button></div></div>
-<div class="table-tools only-editor"><div class="toolbar-primary"><button id="btnAddRow" class="btn btn-primary">+ 상품 등록</button><button id="btnBulkEdit" class="btn btn-outline" disabled hidden>일괄 설정</button><button id="btnCopyRows" class="btn btn-outline" disabled>복사</button><button id="btnDeleteRows" class="btn btn-outline btn-danger-line" disabled>삭제</button></div><div class="toolbar-secondary"><button id="btnImport" class="btn btn-text">엑셀 불러오기</button><input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden><div class="col-settings"><button id="btnColSettings" class="btn btn-text" type="button">열 표시 ▾</button><div id="colSettingsPanel" class="col-panel" hidden></div></div><span id="selCount" class="sel-count">행을 체크하면 일괄 설정·복사·삭제할 수 있습니다</span></div></div>
-<div class="workspace-toolbar"><span class="table-caption">상품 정보 <b id="itemCountLabel"></b></span><button id="btnTableDensity" class="btn btn-text" aria-pressed="false" hidden>열 너비 조정</button><details class="workspace-more"><summary class="btn btn-text">더보기 ⋯</summary><div id="workspaceMoreItems" class="workspace-more-items"><button class="btn btn-outline" id="btnValidateList">이미지 검사</button><button class="btn btn-outline" id="btnExportAutomation">자동화 JSON 내보내기</button><a class="btn btn-outline" data-route="view" href="../view/">등록 상태 기록</a></div></details></div>
-<div class="table-wrap"><table class="grid" id="grid"><colgroup id="gridCols"><col data-key="check"><col data-key="seq"><col data-key="brand"><col data-key="name_own"><col data-key="model"><col data-key="need_retail"><col data-key="need_wholesale"><col data-key="need_naver"><col data-key="price_retail"><col data-key="price_wholesale"><col data-key="price_wholesale_master"><col data-key="price_naver"><col data-key="ref_link"><col data-key="act"><col data-key="note"></colgroup><thead><tr><th class="c-check" data-col="0"><span class="th-label">체크</span><input type="checkbox" id="chkAll" class="chk-all only-editor" title="전체 선택 / 해제"><i class="col-resizer"></i></th><th class="c-seq" data-col="1">No.<i class="col-resizer"></i></th><th class="c-brand" data-col="2">브랜드<i class="col-resizer"></i></th><th class="c-name" data-col="3">상품명<i class="col-resizer"></i></th><th class="c-model" data-col="4">모델<i class="col-resizer"></i></th><th class="c-need" data-col="5">소매몰 등록<i class="col-resizer"></i></th><th class="c-need" data-col="6">도매몰 등록<i class="col-resizer"></i></th><th class="c-need" data-col="7">네이버 등록<i class="col-resizer"></i></th><th class="c-price" data-col="8">소매몰 판매가<i class="col-resizer"></i></th><th class="c-price" data-col="9">도매몰 베이직<i class="col-resizer"></i></th><th class="c-price" data-col="10">도매몰 마스터<i class="col-resizer"></i></th><th class="c-price" data-col="11">네이버 가격<i class="col-resizer"></i></th><th class="c-link" data-col="12">참고 링크<i class="col-resizer"></i></th><th class="c-act" data-col="13">편집<i class="col-resizer"></i></th><th class="c-note" data-col="14">비고<i class="col-resizer"></i></th></tr></thead><tbody id="gridBody"></tbody></table></div></section></main></div>
-<div id="listInfoModal" class="modal" hidden><div class="modal-box list-info-box"><button id="listInfoCancel" class="modal-x" title="닫기" aria-label="닫기">×</button><p class="eyebrow">리스트 설정</p><h2 class="modal-title">리스트 정보</h2><label class="field">리스트 이름<input id="listTitle" maxlength="80" placeholder="리스트 제목"></label><label class="field">작성일<input id="listDate" type="date"></label><input id="listAuthor" type="text" aria-hidden="true" tabindex="-1" hidden><div class="modal-danger-zone"><button id="btnDeleteList" class="btn btn-danger-ghost only-editor">리스트 삭제</button></div><div class="modal-foot"><button id="listInfoCancelSecondary" class="btn">취소</button><button id="listInfoSave" class="btn btn-primary">정보 반영</button></div></div></div>
-<div id="importModal" class="modal" hidden><div class="modal-box"><button class="modal-x" id="imCancel" aria-label="닫기">×</button><h2 class="modal-title">엑셀 불러오기</h2><p id="imFile" class="modal-file"></p><div id="imSummary" class="im-summary"></div><div class="modal-opts"><label><input type="radio" name="imMode" value="replace" checked> 지금 표를 <b>지우고</b> 새로 채우기</label><label><input type="radio" name="imMode" value="append"> 지금 표 아래에 이어 붙이기</label></div><p class="modal-hint">불러온 뒤 상단 저장하기를 눌러야 실제로 저장됩니다.</p><div class="modal-foot"><button id="imApply" class="btn btn-primary">불러오기</button></div></div></div>
-<div id="leaveModal" class="modal" hidden><div class="modal-box modal-box-sm"><button id="lvClose" class="modal-x" title="닫기" aria-label="닫기">×</button><h2 class="modal-title">저장하지 않은 변경 사항이 있습니다</h2><p class="modal-desc">편집한 내용이 아직 저장되지 않았습니다.<br>어떻게 할까요?</p><div class="modal-foot modal-foot-leave"><button id="lvDiscard" class="btn btn-danger-line">저장하지 않고 이동</button><button id="lvSave" class="btn btn-primary">저장하고 이동</button></div></div></div>
-<dialog id="automationDialog" class="automation-dialog" aria-labelledby="autoTitle"><div class="product-modal-shell"><header class="modal-top"><div><p class="eyebrow">상품 정보</p><h2 id="autoTitle">상품 등록 및 수정</h2><p class="modal-subtitle">변경 내용은 현재 리스트에 반영한 뒤 저장할 수 있습니다.</p></div><button id="autoClose" class="icon-btn" aria-label="상품 편집 닫기">×</button></header><div class="product-tabs" role="tablist"><button type="button" class="product-tab is-active" data-product-tab="default" role="tab">기본 설정</button><button type="button" class="product-tab" data-product-tab="images" role="tab">이미지 설정</button></div><div id="autoBody"></div><footer class="modal-foot product-modal-foot"><button id="autoCancel" class="btn">취소</button><button id="autoSave" class="btn btn-primary only-editor">상품 등록</button></footer></div></dialog>
-<dialog id="choiceDialog" class="choice-dialog" aria-labelledby="choiceTitle"><div class="choice-shell"><header class="modal-top"><div><p class="eyebrow">선택</p><h2 id="choiceTitle">브랜드 선택</h2></div><button class="icon-btn" data-choice-close aria-label="선택 닫기">×</button></header><div class="choice-search"><input id="choiceSearch" type="search" placeholder="이름·코드·별칭 검색" autocomplete="off"></div><div id="choiceList" class="choice-list"></div><footer class="modal-foot"><button id="choiceCancel" class="btn">취소</button><button id="choiceConfirm" class="btn btn-primary">선택</button></footer></div></dialog>
-<dialog id="bulkDialog" class="bulk-dialog only-editor" aria-labelledby="bulkTitle"><div class="bulk-shell"><header class="modal-top"><div><p class="eyebrow">선택 상품</p><h2 id="bulkTitle">선택 상품 일괄 설정</h2><p id="bulkDescription" class="field-note"></p></div><button id="bulkClose" class="icon-btn" aria-label="일괄 설정 닫기">×</button></header><form id="bulkForm"><div id="bulkBody"></div><footer class="modal-foot"><span class="field-note">적용을 체크한 값만 바뀝니다.</span><button type="button" id="bulkCancel" class="btn">취소</button><button type="submit" id="bulkApply" class="btn btn-primary">선택 상품에 적용</button></footer></form></div></dialog>
-<script type="application/json" id="automation-data">{"schemaVersion":1,"items":[]}</script><div id="toast" class="toast" hidden></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0"></script><script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script><script src="../js/supabaseClient.js"></script><script src="../js/utils.js"></script><script src="../js/automation-core.js"></script><script src="../js/brand-defaults.js"></script><script src="../js/image-validator.js"></script><script src="../js/state.js"></script><script src="../js/api.js"></script><script src="../js/xlsxImport.js"></script><script src="../js/automation-editor.js"></script><script src="../js/ui.js"></script><script src="../js/app.js"></script><script src="../js/workspace.js"></script><script src="../js/bulk-editor.js"></script>
-</body></html>
+<header class="gnb">
+  <div class="gnb-left">
+    <button id="btnSidebar" class="icon-btn" title="목록 열기 / 접기" aria-label="목록 열기 / 접기">☰</button>
+    <a class="brand-lockup" href="../edit/"><img src="../assets/callto-logo.svg" alt=""><span>CALLTO</span></a>
+  </div>
+  <nav class="gnb-nav" aria-label="주요 화면">
+    <a class="gnb-link" data-route="edit" href="../edit/">상품 리스트</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 설정</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">카테고리 설정</a>
+  </nav>
+  <div class="gnb-right">
+    <span id="syncState" class="sync-state">연결 중…</span>
+    <span id="dirtyBadge" class="dirty-badge" hidden>저장 안 됨</span>
+    <button id="btnSave" class="btn btn-primary only-editor" disabled>저장하기</button>
+  </div>
+</header>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="리스트">
+    <div class="side-top">
+      <button id="btnNewList" class="only-editor btn btn-primary btn-block">새 리스트 추가하기</button>
+      <button id="btnImportSide" class="only-editor btn btn-outline btn-block">엑셀 불러오기</button>
+      <label class="search-box"><span class="sr-only">리스트 검색</span><input id="searchInput" type="search" placeholder="리스트 검색" autocomplete="off"></label>
+    </div>
+    <nav id="listNav" class="list-nav" aria-label="저장된 리스트"><p class="empty-hint">불러오는 중…</p></nav>
+  </aside>
+  <div class="sidebar-dim" id="sidebarDim"></div>
+
+  <main class="main">
+    <section id="emptyState" class="empty-state">
+      <div class="empty-icon" aria-hidden="true">＋</div>
+      <h1>리스트를 선택하세요</h1>
+      <p>왼쪽에서 리스트를 선택하거나 새 리스트를 만들어 상품을 등록하세요.</p>
+    </section>
+
+    <section id="listPane" hidden>
+      <div class="list-head">
+        <div class="list-title-line">
+          <div class="title-group">
+            <h1 id="listTitleDisplay" class="title-display">제목 없는 리스트</h1>
+            <span id="listProgress" class="tag tag-count" title="완료 상품 수 / 전체 상품 수">0 / 0</span>
+          </div>
+          <button id="btnListInfo" class="btn btn-neutral only-editor">리스트 정보</button>
+        </div>
+        <div class="list-meta-line">
+          <span>작성일 | <b id="listDateRO">—</b></span>
+          <span>최종수정 | <b id="listUpdated">—</b></span>
+          <span class="sr-only">생성 <b id="listCreated">—</b></span>
+        </div>
+      </div>
+
+      <div class="table-tools only-editor">
+        <div class="toolbar-primary">
+          <button id="btnAddRow" class="btn btn-outline">＋ 상품 등록</button>
+          <button id="btnBulkEdit" class="btn btn-primary" disabled>일괄 설정</button>
+          <button id="btnCopyRows" class="btn btn-neutral" aria-label="선택 상품 복제" disabled>복사</button>
+          <button id="btnDeleteRows" class="btn btn-danger-line" disabled>삭제</button>
+          <button id="btnImport" class="btn btn-neutral">엑셀 불러오기</button>
+          <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+        </div>
+        <div class="toolbar-secondary">
+          <span id="selCount" class="sel-count">행을 체크하면 일괄 설정·복사·삭제할 수 있습니다</span>
+          <div class="col-settings">
+            <button id="btnColSettings" class="btn btn-text" type="button" aria-expanded="false">열 표시 ▾</button>
+            <div id="colSettingsPanel" class="col-panel" hidden></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="workspace-toolbar">
+        <span class="table-caption">상품 정보 <b id="itemCountLabel"></b></span>
+        <div class="action-row">
+          <button id="btnTableDensity" class="btn btn-text" type="button" aria-pressed="false">전체 열 보기</button>
+          <details class="workspace-more">
+            <summary class="btn btn-text">더보기 ⋯</summary>
+            <div id="workspaceMoreItems" class="workspace-more-items">
+              <button class="btn btn-neutral" id="btnValidateList">이미지 검사</button>
+              <button class="btn btn-neutral" id="btnExportAutomation">자동화 JSON 내보내기</button>
+              <a class="btn btn-neutral" data-route="view" href="../view/">등록 상태 기록</a>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div class="table-wrap" id="tableWrap" tabindex="0" role="region" aria-label="상품 표 (가로 스크롤)">
+        <table class="grid" id="grid">
+          <colgroup id="gridCols"></colgroup>
+          <thead id="gridHead"></thead>
+          <tbody id="gridBody"></tbody>
+        </table>
+      </div>
+      <p class="scroll-hint" id="scrollHint">체크·No.·브랜드·상품명 열은 왼쪽에 고정되고, 모델명부터 오른쪽 열만 가로로 스크롤됩니다.</p>
+    </section>
+  </main>
+</div>
+
+<div id="listInfoModal" class="modal" hidden><div class="modal-box list-info-box">
+  <button id="listInfoCancel" class="modal-x" title="닫기" aria-label="닫기">×</button>
+  <h2 class="modal-title">리스트 정보</h2>
+  <label class="field">리스트 이름<input id="listTitle" maxlength="80" placeholder="리스트 제목"></label>
+  <label class="field">작성일<input id="listDate" type="date"></label>
+  <input id="listAuthor" type="text" aria-hidden="true" tabindex="-1" hidden>
+  <div class="modal-danger-zone"><button id="btnDeleteList" class="btn btn-danger-ghost only-editor">리스트 삭제</button></div>
+  <div class="modal-foot"><button id="listInfoCancelSecondary" class="btn btn-neutral">취소</button><button id="listInfoSave" class="btn btn-primary">정보 반영</button></div>
+</div></div>
+
+<div id="importModal" class="modal" hidden><div class="modal-box">
+  <button class="modal-x" id="imCancel" aria-label="닫기">×</button>
+  <h2 class="modal-title">엑셀 불러오기</h2>
+  <p id="imFile" class="modal-file"></p>
+  <div id="imSummary" class="im-summary"></div>
+  <div class="modal-opts">
+    <label><input type="radio" name="imMode" value="replace" checked> <span>지금 표를 <b>지우고</b> 새로 채우기</span></label>
+    <label><input type="radio" name="imMode" value="append"> <span>지금 표 아래에 이어 붙이기</span></label>
+  </div>
+  <p class="modal-hint">불러온 뒤 상단 저장하기를 눌러야 실제로 저장됩니다.</p>
+  <div class="modal-foot"><button id="imApply" class="btn btn-primary">불러오기</button></div>
+</div></div>
+
+<div id="leaveModal" class="modal" hidden><div class="modal-box modal-box-sm">
+  <button id="lvClose" class="modal-x" title="닫기" aria-label="닫기">×</button>
+  <h2 class="modal-title">저장하지 않은 변경 사항이 있습니다</h2>
+  <p class="modal-desc">편집한 내용이 아직 저장되지 않았습니다.<br>어떻게 할까요?</p>
+  <div class="modal-foot"><button id="lvDiscard" class="btn btn-danger-line">저장하지 않고 이동</button><button id="lvSave" class="btn btn-primary">저장하고 이동</button></div>
+</div></div>
+
+<dialog id="automationDialog" class="app-dialog product-dialog" aria-labelledby="autoTitle">
+  <div class="dialog-shell">
+    <header class="dialog-head">
+      <h2 id="autoTitle">상품 등록 및 수정</h2>
+      <div class="seg-tabs" role="tablist" aria-label="상품 편집 탭">
+        <button type="button" class="seg-tab is-active" data-product-tab="default" role="tab" aria-selected="true">기본 설정</button>
+        <button type="button" class="seg-tab" data-product-tab="images" role="tab" aria-selected="false">이미지 설정</button>
+      </div>
+    </header>
+    <div id="autoBody" class="dialog-body"></div>
+    <footer class="dialog-foot">
+      <span class="foot-note">목록에 반영한 뒤 상단 <b>저장하기</b>를 눌러야 공유됩니다.</span>
+      <button id="autoCancel" class="btn btn-outline">취소</button>
+      <button id="autoSave" class="btn btn-primary only-editor">상품 등록</button>
+    </footer>
+  </div>
+</dialog>
+
+<dialog id="choiceDialog" class="app-dialog choice-dialog" aria-labelledby="choiceTitle">
+  <div class="dialog-shell">
+    <header class="dialog-head"><h2 id="choiceTitle">브랜드 선택</h2></header>
+    <div class="choice-body">
+      <label class="field choice-search"><span id="choiceSearchLabel">브랜드 검색</span><input id="choiceSearch" type="search" placeholder="초성 입력도 가능합니다." autocomplete="off"></label>
+      <div class="choice-listbox">
+        <span class="field-label" id="choiceListLabel">브랜드 리스트</span>
+        <div id="choiceList" class="choice-list" role="listbox" aria-labelledby="choiceListLabel"></div>
+        <p id="choiceState" class="choice-state" aria-live="polite"></p>
+      </div>
+    </div>
+    <footer class="dialog-foot">
+      <button id="choiceCancel" class="btn btn-outline">취소</button>
+      <button id="choiceConfirm" class="btn btn-primary">브랜드 선택</button>
+    </footer>
+  </div>
+</dialog>
+
+<dialog id="bulkDialog" class="app-dialog bulk-dialog only-editor" aria-labelledby="bulkTitle">
+  <div class="dialog-shell">
+    <header class="dialog-head"><div><h2 id="bulkTitle">선택 상품 일괄 설정</h2><p id="bulkDescription" class="field-note"></p></div><button id="bulkClose" class="icon-btn" aria-label="일괄 설정 닫기">×</button></header>
+    <form id="bulkForm">
+      <div id="bulkBody" class="dialog-body"></div>
+      <footer class="dialog-foot">
+        <span class="foot-note">적용을 체크한 값만 바뀝니다.</span>
+        <button type="button" id="bulkCancel" class="btn btn-outline">취소</button>
+        <button type="submit" id="bulkApply" class="btn btn-primary">선택 상품에 적용</button>
+      </footer>
+    </form>
+  </div>
+</dialog>
+
+<script type="application/json" id="automation-data">{"schemaVersion":1,"items":[]}</script>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script src="../js/supabaseClient.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/automation-core.js"></script>
+<script src="../js/brand-defaults.js"></script>
+<script src="../js/image-validator.js"></script>
+<script src="../js/state.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/xlsxImport.js"></script>
+<script src="../js/automation-editor.js"></script>
+<script src="../js/ui.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/workspace.js"></script>
+<script src="../js/bulk-editor.js"></script>
+</body>
+</html>

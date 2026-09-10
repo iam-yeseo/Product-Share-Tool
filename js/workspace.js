@@ -1,14 +1,9 @@
 /* CALLTO 작업공간 표현 계층.
-   표는 읽기 전용이고 상품 정보는 중앙 상품 모달의 초안에서만 수정합니다. */
+   표는 읽기 전용이고 상품 정보는 중앙 상품 모달의 초안에서만 수정합니다.
+   모달 배치는 Figma modal-default(640px, 전체 폭 / 1-2 / 1-3 그리드)를 따릅니다. */
 var Workspace = (function () {
   var expanded = false;
-  var priceFields = [
-    ['price_retail_regular', '소비자몰 정가'],
-    ['price_retail', '소비자몰 판매가'],
-    ['price_wholesale', '도매몰 베이직'],
-    ['price_wholesale_master', '도매몰 마스터'],
-    ['price_naver', '스마트스토어 가격']
-  ];
+  var CHEVRON = '<svg class="caret" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true" focusable="false"><path d="M2.5 4.5 6 8l3.5-3.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   var origins = [
     ['korea', '대한민국', 'Made in Korea'],
     ['china', '중국', 'Made in China'],
@@ -30,15 +25,16 @@ var Workspace = (function () {
   function compactHidden() { return false; }
   function columns() {}
 
-  /* 기존 열 너비 회귀 테스트와 사용자 설정을 위한 호환 함수입니다. */
+  /* 남는 가로 폭은 읽어야 하는 텍스트 열에 우선 배분합니다. */
   function fitWidths(entries, available) {
     var fitted = entries.map(function (entry) { return { col: entry.col, key: entry.key, width: entry.width }; });
     if (expanded || !available) return fitted;
     var total = fitted.reduce(function (sum, entry) { return sum + entry.width; }, 0);
     var extra = Math.floor(available - total);
     if (extra <= 0) return fitted;
-    var weights = { name_own: 3, automation: 2, brand: 1 };
+    var weights = { name_own: 4, note: 2, model: 1, brand: 1 };
     var flexible = fitted.filter(function (entry) { return entry.width > 0 && weights[entry.key]; });
+    if (!flexible.length) return fitted;
     var weightTotal = flexible.reduce(function (sum, entry) { return sum + weights[entry.key]; }, 0);
     var remaining = extra;
     flexible.forEach(function (entry, index) {
@@ -49,26 +45,26 @@ var Workspace = (function () {
     return fitted;
   }
 
-  function brandOptions(it, query) {
-    var list = brands(), selected = AutomationCore.matchBrand(list, it.brand), custom = isCustomBrand(it, list);
-    var q = String(query || '').trim();
-    var html = '<option value="">브랜드 선택</option>';
-    list.slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }); }).forEach(function (brand) {
-      if (brand.active === false && brand !== selected) return;
-      if (q && brand !== selected && !AutomationCore.brandMatches(brand, q)) return;
-      html += '<option value="' + esc(brand.name) + '"' + (!custom && brand === selected ? ' selected' : '') + '>' + esc(brand.name) + (brand.code ? ' · ' + esc(brand.code) : '') + '</option>';
-    });
-    html += '<option value="' + (typeof UI !== 'undefined' && UI.BRAND_CUSTOM ? UI.BRAND_CUSTOM : '__custom__') + '"' + (custom ? ' selected' : '') + '>직접 입력…</option>';
-    return html;
+  /* ---------- 모달 필드 ---------- */
+  function inputField(options) {
+    var value = options.value == null ? '' : options.value;
+    return '<label class="field ' + (options.width || 'w-full') + '"><span>' + esc(options.label) + '</span>' +
+      '<input data-product-field="' + options.field + '" value="' + esc(value) + '"' +
+      (options.inputmode ? ' inputmode="' + options.inputmode + '"' : '') +
+      (options.maxlength ? ' maxlength="' + options.maxlength + '"' : '') +
+      (options.klass ? ' class="' + options.klass + '"' : '') +
+      ' placeholder="' + esc(options.placeholder || '') + '"' + (options.ro ? ' readonly' : '') + '>' +
+      (options.extra || '') + '</label>';
   }
 
   function brandField(it, ro) {
     var list = brands(), selected = AutomationCore.matchBrand(list, it.brand), custom = isCustomBrand(it, list);
     var value = selected ? selected.name : (it.brand || '');
-    var select = '<select class="legacy-brand-value" data-product-brand-select' + (ro ? ' disabled' : '') + ' hidden>' + brandOptions(it, '') + '</select>';
-    var trigger = '<button type="button" class="choice-trigger" data-choice="brand"' + (ro ? ' disabled' : '') + '><span data-brand-value>' + esc(value || '브랜드 선택') + '</span><span aria-hidden="true">⌄</span></button>';
     var direct = custom ? '<input class="brand-direct-input" data-product-field="brand" value="' + esc(it.brand || '') + '" placeholder="브랜드 직접 입력" maxlength="30"' + (ro ? ' readonly' : '') + '>' : '';
-    return '<label class="field">브랜드 선택' + select + trigger + direct + '<span class="field-note">등록된 브랜드는 검색·선택하고, 미등록 브랜드는 직접 입력으로 남길 수 있습니다.</span></label>';
+    return '<div class="field w-third"><span class="field-label">브랜드</span>' +
+      '<button type="button" class="choice-trigger" data-choice="brand"' + (ro ? ' disabled' : '') + '>' +
+      '<span class="cv' + (value ? '' : ' is-placeholder') + '" data-brand-value>' + esc(value || '브랜드 선택') + '</span>' +
+      CHEVRON + '</button>' + direct + '</div>';
   }
 
   function originState(value) {
@@ -76,11 +72,14 @@ var Workspace = (function () {
     var preset = origins.find(function (item) { return item[2] && item[2].toLowerCase() === String(value || '').trim().toLowerCase(); });
     return { key: preset ? preset[0] : (raw ? 'custom' : ''), custom: preset ? '' : raw };
   }
-  function originOptions(value, ro) {
+  function originField(value, ro) {
     var state = originState(value);
-    return '<select data-origin-select' + (ro ? ' disabled' : '') + '><option value="">원산지 선택</option>' + origins.map(function (item) {
-      return '<option value="' + item[0] + '"' + (item[0] === state.key ? ' selected' : '') + '>' + item[1] + '</option>';
-    }).join('') + '</select>' + (state.key === 'custom' ? '<input data-basic="origin-custom" value="' + esc(state.custom) + '" placeholder="예: Vietnam" pattern="[A-Za-z][A-Za-z .\'\\-]*" maxlength="40"' + (ro ? ' readonly' : '') + '>' : '') + '<span class="field-note" data-origin-preview>' + esc(value ? '미리보기: ' + value : '영문 국가명만 입력할 수 있습니다.') + '</span>';
+    return '<label class="field w-third"><span>원산지</span><select data-origin-select' + (ro ? ' disabled' : '') + '>' +
+      '<option value="">원산지 선택</option>' + origins.map(function (item) {
+        return '<option value="' + item[0] + '"' + (item[0] === state.key ? ' selected' : '') + '>' + item[1] + '</option>';
+      }).join('') + '</select>' +
+      (state.key === 'custom' ? '<input class="field-extra" data-basic="origin-custom" value="' + esc(state.custom) + '" placeholder="예: Vietnam" pattern="[A-Za-z][A-Za-z .\'\\-]*" maxlength="40"' + (ro ? ' readonly' : '') + '>' : '') +
+      '<span class="field-note" data-origin-preview>' + esc(value ? '미리보기: ' + value : '영문 국가명만 입력할 수 있습니다.') + '</span></label>';
   }
   function originOutput(key, custom) {
     var found = origins.find(function (item) { return item[0] === key; });
@@ -101,32 +100,61 @@ var Workspace = (function () {
   }
   function naverNameField(it, ro) {
     var mode = smartNameMode(it), value = it.name_naver || (mode === 'auto' ? smartName(it.name_own) : '');
-    return '<label class="field field-wide">네이버 상품명<div class="smart-name-row"><input data-product-field="name_naver" data-naver-input value="' + esc(value) + '" placeholder="상품명을 입력하면 자동으로 변환됩니다." maxlength="120"' + (ro ? ' readonly' : mode === 'auto' ? ' readonly' : '') + '><label class="inline-check"><input type="checkbox" data-naver-mode' + (mode === 'manual' ? ' checked' : '') + (ro ? ' disabled' : '') + '> 직접 입력</label></div><span class="char-count" data-naver-count></span><span class="field-note">자동 모드는 원상품명의 `/`만 제거합니다. 50자 초과 시 경고하며 자동으로 자르지 않습니다.</span></label>';
+    return '<div class="field w-full"><span class="field-label">스마트스토어 전용 상품명</span>' +
+      '<input data-product-field="name_naver" data-naver-input value="' + esc(value) + '" placeholder="상품명을 입력하면 자동으로 변환됩니다." maxlength="120"' + (ro || mode === 'auto' ? ' readonly' : '') + '>' +
+      '<div class="name-meta-row"><label class="check-line check-line-sm"><input type="checkbox" data-naver-mode' + (mode === 'manual' ? ' checked' : '') + (ro ? ' disabled' : '') + '><span>직접 입력</span></label>' +
+      '<span class="char-count" data-naver-count></span></div>' +
+      '<span class="field-note">자동 모드는 상품명의 `/`만 제거하며 50자를 넘어도 자동으로 자르지 않습니다.</span></div>';
   }
 
-  function fields(it, ro) {
+  function priceField(label, field, value, ro, options) {
+    options = options || {};
+    return '<label class="field w-third"><span>' + esc(label) + '</span>' +
+      '<input class="price-input" inputmode="numeric" data-product-field="' + field + '" value="' + esc(withComma(value)) + '"' +
+      (ro || options.disabled ? ' disabled' : '') + ' placeholder="' + esc(options.placeholder || '0원') + '">' +
+      (options.extra || '') + '</label>';
+  }
+
+  /* opts: { categoryField(store, ro) → HTML, regularManual: boolean } */
+  function fields(it, ro, opts) {
+    opts = typeof opts === 'function' ? { categoryField: opts } : (opts || {});
+    var categoryField = opts.categoryField || function () { return ''; };
     it.automation = AutomationCore.normalize(it.automation);
-    var needs = ['retail', 'wholesale', 'naver'].map(function (store) {
-      var label = store === 'retail' ? '소비자몰' : store === 'wholesale' ? '도매몰' : '스마트스토어';
-      var field = 'need_' + store;
-      return '<label class="need-option"><input type="checkbox" data-need-field="' + field + '"' + (it[field] === '필요' ? ' checked' : '') + (ro ? ' disabled' : '') + '><span>' + label + '</span></label>';
+
+    var needs = [['retail', '소비자몰'], ['wholesale', '도매몰'], ['naver', '스마트스토어']].map(function (pair) {
+      var field = 'need_' + pair[0];
+      return '<label class="check-line"><input type="checkbox" data-need-field="' + field + '"' +
+        (it[field] === '필요' ? ' checked' : '') + (ro ? ' disabled' : '') + '><span>' + pair[1] + '</span></label>';
     }).join('');
-    var prices = priceFields.map(function (pair) {
-      var field = pair[0], readonly = ro || field === 'price_naver';
-      return '<label class="field"><span>' + pair[1] + (field === 'price_naver' ? ' <small>소비자몰 판매가와 연동</small>' : '') + '</span><input inputmode="numeric" data-product-field="' + field + '" value="' + esc(withComma(field === 'price_naver' ? it.price_retail : it[field])) + '"' + (readonly ? ' readonly' : '') + ' placeholder="' + (field === 'price_retail_regular' ? '정가 입력 안 함' : '0원') + '"></label>';
-    }).join('');
-    var out = '<section class="modal-section product-info-section"><div class="section-heading"><div><h3>상품 정보</h3><p class="field-note">상품 기본 정보와 외부몰 표시값을 관리합니다.</p></div></div><div class="field-grid">';
-    out += '<label class="field">브랜드 검색<input type="search" class="sr-only-input" data-product-brand-search placeholder="브랜드명·코드·한글 별칭 검색"' + (ro ? ' disabled' : '') + '></label>';
-    out += brandField(it, ro);
-    out += '<label class="field field-wide">자사몰 상품명<input data-product-field="name_own" value="' + esc(it.name_own || '') + '" placeholder="상품명 입력"' + (ro ? ' readonly' : '') + '></label>';
+
+    var regularManual = opts.regularManual !== undefined ? opts.regularManual : it.price_retail_regular !== null && it.price_retail_regular !== undefined;
+
+    var out = '<section class="modal-section"><div class="f-grid">';
+    out += inputField({ label: '상품명', field: 'name_own', value: it.name_own, placeholder: '상품명 입력', ro: ro, width: 'w-full' });
     out += naverNameField(it, ro);
-    out += '<label class="field">모델명<input data-product-field="model" value="' + esc(it.model || '') + '" placeholder="모델명 입력"' + (ro ? ' readonly' : '') + '></label>';
-    out += '<label class="field">원산지' + originOptions(it.automation.origin, ro) + '</label>';
-    out += '<label class="field">참고 링크<input data-product-field="ref_link" value="' + esc(it.ref_link || '') + '" placeholder="https://"' + (ro ? ' readonly' : '') + '></label>';
-    out += '<label class="field">비고<input data-product-field="note" value="' + esc(it.note || '') + '" placeholder="메모"' + (ro ? ' readonly' : '') + '></label>';
-    out += '</div></section><section class="modal-section"><h3>상품 등록 여부</h3><div class="needs-grid">' + needs + '</div></section>';
-    out += '<section class="modal-section"><h3>카테고리 및 금액</h3><p class="field-note">소비자몰·도매몰 카테고리는 서로 독립적으로 저장됩니다. 소비자몰 정가는 공란과 0원을 구분합니다.</p><div class="field-grid price-grid">' + prices + '</div><p class="field-note">도매몰 마스터 금액이 공란이면 베이직 금액을 따릅니다.</p></section>';
-    out += '<p class="modal-validation-note">목록에 반영되며, 상단 저장하기를 눌러야 공유됩니다.</p>';
+    out += brandField(it, ro);
+    out += inputField({ label: '모델명', field: 'model', value: it.model, placeholder: '모델명 입력', ro: ro, width: 'w-third' });
+    out += originField(it.automation.origin, ro);
+    out += inputField({ label: '참고링크', field: 'ref_link', value: it.ref_link, placeholder: '링크 입력하기', ro: ro, width: 'w-half' });
+    out += inputField({ label: '비고', field: 'note', value: it.note, placeholder: '텍스트 입력', ro: ro, width: 'w-half' });
+    out += '</div></section>';
+
+    out += '<section class="modal-section"><h3>상품 등록 여부</h3><div class="needs-grid">' + needs + '</div></section>';
+
+    out += '<section class="modal-section"><h3>카테고리 및 금액</h3><div class="f-grid">';
+    out += categoryField('retail', ro);
+    out += priceField('소비자몰 정가', 'price_retail_regular', it.price_retail_regular, ro, {
+      disabled: !regularManual,
+      placeholder: '정가 입력 안 함',
+      extra: '<label class="check-line check-line-sm field-extra"><input type="checkbox" data-regular-manual' + (regularManual ? ' checked' : '') + (ro ? ' disabled' : '') + '><span>직접 입력</span></label>'
+    });
+    out += priceField('소비자몰 판매가', 'price_retail', it.price_retail, ro, { extra: '<span class="field-note">스마트스토어 가격은 이 값과 항상 연동됩니다.</span>' });
+    out += categoryField('wholesale', ro);
+    out += priceField('도매몰(베이직) 금액', 'price_wholesale', it.price_wholesale, ro);
+    out += priceField('도매몰(마스터) 금액', 'price_wholesale_master', it.price_wholesale_master, ro, {
+      extra: '<span class="field-note">공란일 경우 베이직 금액과 동일하게 입력됩니다.</span>'
+    });
+    out += '</div></section>';
     return out;
   }
 
@@ -149,8 +177,7 @@ var Workspace = (function () {
     var naver = document.querySelector('[data-product-field="price_naver"]');
     if (naver && (field === 'link_np' || field === 'price_retail')) {
       naver.value = withComma(it.price_naver);
-      /* Legacy callers still use this flag; the new modal keeps the input
-         read-only and never renders a separate Naver price toggle. */
+      /* 구버전 화면 호환용 플래그입니다. 새 모달에는 스마트스토어 가격 입력이 없습니다. */
       naver.disabled = it.link_np !== false;
     }
   }
@@ -162,19 +189,30 @@ var Workspace = (function () {
     it.brand = matched ? matched.name : value;
     it.brand_custom = false;
   }
-  function searchBrands(it, query) {
-    var selector = document.querySelector('[data-product-brand-select]');
-    if (selector) selector.innerHTML = brandOptions(it, query);
-  }
+  /* 전체 열 보기가 아닐 때는 Figma 기준 너비를 넘지 않게 제한합니다. */
   function width(key, value) {
-    var widths = { check: 48, seq: 58, brand: 140, name_own: 300, model: 150, need_retail: 100, need_wholesale: 100, need_naver: 110, price_retail: 150, price_wholesale: 140, price_wholesale_master: 150, price_naver: 150, ref_link: 120, act: 82, note: 180 };
+    var widths = {
+      check: 44, seq: 44, brand: 120, name_own: 560, model: 170,
+      need_retail: 72, need_wholesale: 72, need_naver: 72,
+      price_retail: 120, price_wholesale: 120, price_wholesale_master: 120, price_naver: 120,
+      ref_link: 80, act: 80, note: 240
+    };
     return expanded ? value : Math.min(value, widths[key] || value);
   }
 
   if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded', function () {
     var toggle = document.getElementById('btnTableDensity');
-    if (toggle) toggle.addEventListener('click', function () { expanded = !expanded; toggle.setAttribute('aria-pressed', String(expanded)); toggle.textContent = expanded ? '기본 열 보기' : '전체 열 보기'; if (typeof UI !== 'undefined') UI.applyColWidths(); });
+    if (toggle) toggle.addEventListener('click', function () {
+      expanded = !expanded;
+      toggle.setAttribute('aria-pressed', String(expanded));
+      toggle.textContent = expanded ? '기본 열 보기' : '전체 열 보기';
+      if (typeof UI !== 'undefined') UI.applyColWidths();
+    });
   });
 
-  return { width: width, fitWidths: fitWidths, visibleItems: visibleItems, filterRows: filterRows, resetFilter: resetFilter, compactHidden: compactHidden, columns: columns, refresh: refresh, fields: fields, editField: editField, selectBrand: selectBrand, searchBrands: searchBrands, originOutput: originOutput, origins: origins, smartName: smartName, smartNameMode: smartNameMode };
+  return {
+    width: width, fitWidths: fitWidths, visibleItems: visibleItems, filterRows: filterRows, resetFilter: resetFilter,
+    compactHidden: compactHidden, columns: columns, refresh: refresh, fields: fields, editField: editField,
+    selectBrand: selectBrand, originOutput: originOutput, origins: origins, smartName: smartName, smartNameMode: smartNameMode
+  };
 })();

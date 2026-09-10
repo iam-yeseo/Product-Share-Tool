@@ -60,7 +60,7 @@ var BulkEditor = (function () {
     }).map(function (cat) { return option(cat.code, AutomationCore.path(cats,cat.code) + ' [' + cat.code + ']'); }).join('');
   }
   function categoryControl(store) {
-    var key = 'category_' + store, label = store === 'retail' ? '소매몰' : '도매몰';
+    var key = 'category_' + store, label = store === 'retail' ? '소비자몰' : '도매몰';
     return '<input type="search" data-bulk-search="' + store + '" data-bulk-control="' + key + '" placeholder="' + label + ' 카테고리 검색" disabled>' +
       '<select data-bulk-field="' + key + '" data-bulk-control="' + key + '" disabled>' + categoryOptions(store,'','') + '</select>';
   }
@@ -79,17 +79,17 @@ var BulkEditor = (function () {
         row('ref_link','참고 링크',input('ref_link','text','https://')) +
         row('note','비고',input('note','text','공통 비고')) +
       '</div></section>' +
-      '<section class="bulk-section"><h3>몰별 등록·카테고리·가격</h3><p class="field-note">소매몰과 도매몰 카테고리는 서로 독립적으로 저장됩니다.</p><div class="bulk-fields">' +
-        row('need_retail','소매몰 등록 필요',select('need_retail',NEED_OPTIONS.map(function (v) { return [v,v]; }),'선택',true)) +
+      '<section class="bulk-section"><h3>몰별 등록·카테고리·가격</h3><p class="field-note">소비자몰과 도매몰 카테고리는 서로 독립적으로 저장됩니다.</p><div class="bulk-fields">' +
+        row('need_retail','소비자몰 등록 필요',select('need_retail',NEED_OPTIONS.map(function (v) { return [v,v]; }),'선택',true)) +
         row('need_wholesale','도매몰 등록 필요',select('need_wholesale',NEED_OPTIONS.map(function (v) { return [v,v]; }),'선택',true)) +
-        row('need_naver','네이버 등록 필요',select('need_naver',NEED_OPTIONS.map(function (v) { return [v,v]; }),'선택',true)) +
-        row('category_retail','소매몰 카테고리',categoryControl('retail')) +
+        row('need_naver','스마트스토어 등록 필요',select('need_naver',NEED_OPTIONS.map(function (v) { return [v,v]; }),'선택',true)) +
+        row('category_retail','소비자몰 카테고리',categoryControl('retail')) +
         row('category_wholesale','도매몰 카테고리',categoryControl('wholesale')) +
-        row('price_retail_regular','소매몰 정가',input('price_retail_regular','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
-        row('price_retail','소매몰 판매가 (도매몰 정가)',input('price_retail','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
-        row('price_wholesale','도매몰 베이직',input('price_wholesale','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
-        row('price_wholesale_master','도매몰 마스터',input('price_wholesale_master','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
-        '<p class="field-note bulk-derived-note">네이버 가격은 소비자몰 판매가를 자동으로 사용하며 별도 입력할 수 없습니다.</p>' +
+        row('price_retail_regular','소비자몰 정가',input('price_retail_regular','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
+        row('price_retail','소비자몰 판매가 (도매몰 정가)',input('price_retail','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
+        row('price_wholesale','도매몰(베이직) 금액',input('price_wholesale','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
+        row('price_wholesale_master','도매몰(마스터) 금액',input('price_wholesale_master','text','비우면 가격 삭제',' inputmode="numeric" data-bulk-price')) +
+        '<p class="field-note bulk-derived-note">스마트스토어 가격은 소비자몰 판매가를 자동으로 사용하며 별도 입력할 수 없습니다.</p>' +
       '</div></section>' +
       '<section class="bulk-section"><h3>상세 이미지 주소 생성 기본값</h3><p class="field-note">이미 만든 상세 이미지 주소는 바꾸지 않습니다.</p><div class="bulk-fields">' +
         row('generator_folder','이미지 폴더',select('generator_folder',folders,'폴더 미선택으로 변경')) +
@@ -113,10 +113,15 @@ var BulkEditor = (function () {
     });
     return changes;
   }
-  function close() { var dialog = document.getElementById('bulkDialog'); if (dialog.open) dialog.close(); var button = document.getElementById('btnBulkEdit'); if (button && !button.hidden) button.focus(); }
+  function close() {
+    AutomationEditor.closeDialog(document.getElementById('bulkDialog'), function () {
+      var button = document.getElementById('btnBulkEdit');
+      if (button && !button.disabled) button.focus();
+    });
+  }
   function open() {
     if (!selectedCount()) { toast('일괄 설정할 상품을 체크해 주세요','warn'); return; }
-    render(); document.getElementById('bulkDialog').showModal();
+    render(); AutomationEditor.openDialog(document.getElementById('bulkDialog'));
   }
   function init() {
     var button = document.getElementById('btnBulkEdit'), dialog = document.getElementById('bulkDialog'), form = document.getElementById('bulkForm');

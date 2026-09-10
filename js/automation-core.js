@@ -36,11 +36,40 @@ var AutomationCore = (function () {
     if (s && typeof s === 'object' && !Array.isArray(s.brands)) s.brands = [];
     return s;
   }
+  /* 고도몰 상품명은 <font …> 같은 태그를 포함할 수 있습니다.
+     원문은 저장·복사·전달에 그대로 쓰고, 목록 표시에만 이 함수로 읽기용 텍스트를 만듭니다.
+     결과는 항상 텍스트로만 출력해야 하며 DOM에 그대로 삽입하지 않습니다. */
+  var ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
+  function decodeEntities(text) {
+    return String(text).replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, function (whole, body) {
+      if (body.charAt(0) === '#') {
+        var code = body.charAt(1) === 'x' || body.charAt(1) === 'X' ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
+        if (!isFinite(code) || code < 1 || code > 0x10ffff) return whole;
+        try { return String.fromCodePoint(code); } catch (e) { return whole; }
+      }
+      var named = ENTITIES[body.toLowerCase()];
+      return named === undefined ? whole : named;
+    });
+  }
+  function hasMarkup(value) { return /<[a-zA-Z/!][^>]*>/.test(String(value == null ? '' : value)); }
+  function displayName(value) {
+    var raw = String(value == null ? '' : value);
+    if (raw.indexOf('<') === -1 && raw.indexOf('&') === -1) return raw;
+    var text = raw
+      .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, '')
+      .replace(/<br\s*\/?>/gi, ' ')
+      .replace(/<[^>]*>/g, '');
+    return decodeEntities(text).replace(/\s+/g, ' ').trim();
+  }
   function normalize(value) {
     var a = value && typeof value === 'object' && !Array.isArray(value) ? clone(value) : {};
     a.categoryCodes = Object.assign({ retail: '', wholesale: '' }, a.categoryCodes);
     a.detailImages = Array.isArray(a.detailImages) ? a.detailImages : [];
     a.generator = Object.assign({ brand: '', product: '', folder: '', extension: 'jpg', count: 1 }, a.generator);
+    /* 생성용 브랜드·모델명은 기본 설정값을 따르고 '직접 입력'일 때만 따로 보관합니다.
+       기존 데이터는 값이 남아 있으면 직접 입력으로 봅니다. */
+    a.generator.brandManual = typeof a.generator.brandManual === 'boolean' ? a.generator.brandManual : !!a.generator.brand;
+    a.generator.productManual = typeof a.generator.productManual === 'boolean' ? a.generator.productManual : !!a.generator.product;
     a.naverNameMode = a.naverNameMode === 'manual' ? 'manual' : 'auto';
     a.origin = typeof a.origin === 'string' ? a.origin.trim() : '';
     a.schemaVersion = 1;
@@ -73,6 +102,14 @@ var AutomationCore = (function () {
     if (!/^[a-z0-9][a-z0-9_-]*$/.test(folder)) return '';
     if (!/^[a-z0-9][a-z0-9_.-]*\.(jpg|png|webp|gif)$/.test(filename) || filename.includes('..')) return '';
     return BASE + folder + '/' + filename;
+  }
+  /* 이미지 주소 생성에 실제로 쓰는 값. 직접 입력이 아니면 상품 기본 정보를 따릅니다. */
+  function generatorValues(item) {
+    var a = normalize(item && item.automation), g = a.generator;
+    return Object.assign({}, g, {
+      brand: g.brandManual ? g.brand : (item && item.brand) || '',
+      product: g.productManual ? g.product : (item && item.model) || ''
+    });
   }
   function generate(g) {
     var brand = slug(g.brand), product = slug(g.product), count = Number(g.count);
@@ -159,6 +196,6 @@ var AutomationCore = (function () {
     });
     return s;
   }
-  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, hangulInitials: hangulInitials, brandSearchText: brandSearchText, brandMatches: brandMatches, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
+  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, hangulInitials: hangulInitials, brandSearchText: brandSearchText, brandMatches: brandMatches, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, generatorValues: generatorValues, displayName: displayName, hasMarkup: hasMarkup, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
 })();
 if (typeof module !== 'undefined') module.exports = AutomationCore;

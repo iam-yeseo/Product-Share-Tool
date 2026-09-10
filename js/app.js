@@ -178,53 +178,6 @@ function addRow() {
   if (typeof AutomationEditor !== "undefined" && AutomationEditor.openNew) AutomationEditor.openNew(makeItem(State.items.length + 1));
 }
 
-function moveRow(idx, dir) {
-  var to = idx + dir;
-  if (to < 0 || to >= State.items.length) return;
-  var tmp = State.items[idx];
-  State.items[idx] = State.items[to];
-  State.items[to] = tmp;
-  renumber();
-  setDirty(true);
-  UI.renderGrid();
-}
-
-function moveRowTo(idx, pos) {
-  var to = Math.max(0, Math.min(State.items.length - 1, pos - 1));
-  if (to === idx) { UI.renderGrid(); return; }
-  var row = State.items.splice(idx, 1)[0];
-  State.items.splice(to, 0, row);
-  renumber();
-  setDirty(true);
-  UI.renderGrid();
-}
-
-function deleteRow(idx) {
-  var it = State.items[idx];
-  if (!confirm((it.brand || it.name_own || "이 행") + " 을(를) 삭제할까요?")) return;
-  if (State.baseItemIds[it.id]) removedIds.push(it.id);
-  delete State.selected[it.id];
-  State.items.splice(idx, 1);
-  renumber();
-  setDirty(true);
-  UI.renderGrid();
-  UI.renderHead();
-}
-
-/* 브랜드 '직접 입력' → 목록 선택으로 되돌리기.
-   입력한 이름이 목록에 있으면 그 브랜드를 고르고, 없으면 비웁니다. */
-function brandToList(idx) {
-  var it = State.items[idx];
-  var matched = AutomationCore.matchBrand(AutomationEditor.brands(), it.brand);
-  var before = it.brand;
-  it.brand = matched ? matched.name : "";
-  it.brand_custom = false;
-  if (it.brand !== before) setDirty(true);
-  UI.renderGrid();
-  var sel = document.querySelector('tr[data-id="' + it.id + '"] .brand-select');
-  if (sel) sel.focus();
-}
-
 /* 엑셀 등에서 들어온 브랜드 문자열을 등록된 목록과 맞춥니다.
    목록에 있으면 등록된 이름으로 바꾸고(선택 상태), 없으면 직접 입력 상태로 둡니다. */
 function applyBrandMatching(items) {
@@ -402,71 +355,19 @@ function bindEvents() {
   document.getElementById("btnCopyRows").addEventListener("click", copySelectedRows);
   document.getElementById("btnDeleteRows").addEventListener("click", deleteSelectedRows);
 
-  /* 전체 선택 / 해제 */
-  var chkAll = document.getElementById("chkAll");
-  if (chkAll) chkAll.addEventListener("change", function (e) {
-      clearSelection();
-      if (e.target.checked) {
-        (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) { State.selected[it.id] = true; });
-      }
-      UI.renderGrid();
-    });
-
-  /* 머리글 일괄 체크 — 등록 필요(소매·도매·네이버) / 네이버 가격 연동 (편집자 전용) */
-  var gridHead = document.querySelector("#grid thead");
+  /* 전체 선택 / 해제 — 머리글은 다시 그려지므로 위임으로 연결합니다. */
+  var gridHead = document.getElementById("gridHead");
   if (gridHead) gridHead.addEventListener("change", function (e) {
-    if (State.view !== "editor") return;
-
-    if (e.target.classList.contains("chk-need-all")) {
-      var field = e.target.dataset.field;
-      var on = e.target.checked;
-      (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) { it[field] = on ? "필요" : "불필요"; });
-      setDirty(true);
-      UI.renderGrid();
-      return;
+    if (!e.target.classList.contains("chk-all")) return;
+    clearSelection();
+    if (e.target.checked) {
+      (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) { State.selected[it.id] = true; });
     }
-    if (e.target.classList.contains("chk-link-all")) {
-      var link = e.target.checked;
-      (typeof Workspace !== "undefined" ? Workspace.visibleItems() : State.items).forEach(function (it) {
-        it.link_np = link;
-        if (link) it.price_naver = it.price_retail;
-      });
-      setDirty(true);
-      UI.renderGrid();
-      return;
-    }
+    UI.renderGrid();
   });
 
-  /* 표 — 입력 */
+  /* 표는 읽기 전용입니다. 값 편집은 상품 모달에서만 이루어집니다. */
   var body = document.getElementById("gridBody");
-
-  if (body) body.addEventListener("input", function (e) {
-    var tr = e.target.closest("tr[data-id]");
-    if (!tr) return;
-    var idx = findIndex(tr.dataset.id);
-    if (idx < 0) return;
-    var it = State.items[idx];
-    var f = e.target.dataset.field;
-
-    if (e.target.classList.contains("cell-price")) {
-      var formatted = withComma(e.target.value);
-      e.target.value = formatted;
-      it[f] = toNumberOrNull(formatted);
-      // 소매몰 판매가가 네이버와 연동되어 있으면 함께 갱신합니다.
-      if (f === "price_retail" && it.link_np !== false) {
-        it.price_naver = it.price_retail;
-        var naverInput = tr.querySelector('.cell-price[data-field="price_naver"]');
-        if (naverInput) naverInput.value = withComma(it.price_naver);
-      }
-      setDirty(true);
-      return;
-    }
-    // 텍스트 셀만 처리합니다. (체크박스는 change 에서 다룹니다)
-    if (f && f !== "seq" && e.target.classList.contains("cell-input")) {
-      it[f] = e.target.value;
-      setDirty(true);
-    }
-  });
 
   if (body) body.addEventListener("change", async function (e) {
     var tr = e.target.closest("tr[data-id]");
@@ -475,7 +376,7 @@ function bindEvents() {
     if (idx < 0) return;
     var it = State.items[idx];
 
-    /* 행 선택 — 편집자 전용. 등록 완료 상태는 건드리지 않습니다. */
+    /* 행 선택 — 일괄 작업용입니다. 등록 완료 상태는 건드리지 않습니다. */
     if (e.target.classList.contains("chk-sel")) {
       if (e.target.checked) State.selected[it.id] = true;
       else delete State.selected[it.id];
@@ -494,83 +395,20 @@ function bindEvents() {
         it.done_at = next ? new Date().toISOString() : null;
         AutomationEditor.publish();
         tr.classList.toggle("is-done", next);
-        UI.renderHead();
+        UI.updateListCounts();
         refreshSidebar();
       } catch (err) {
         console.error(err);
         e.target.checked = it.done;
         toast("상태를 바꾸지 못했습니다: " + (err.message || err), "error");
       }
-      return;
-    }
-
-    /* 등록 필요 체크박스 — 편집자 전용 (체크=필요, 해제=불필요)
-       불필요로 바꾸면 해당 가격 칸을 잠그기 위해 표를 다시 그립니다. */
-    if (e.target.classList.contains("chk-need")) {
-      if (State.view !== "editor") return;
-      it[e.target.dataset.field] = e.target.checked ? "필요" : "불필요";
-      setDirty(true);
-      UI.renderGrid();
-      return;
-    }
-
-    /* 소매몰↔네이버 가격 연동 토글 — 편집자 전용 */
-    if (e.target.classList.contains("chk-price-link")) {
-      if (State.view !== "editor") return;
-      it.link_np = e.target.checked;
-      if (e.target.checked) it.price_naver = it.price_retail;
-      setDirty(true);
-      UI.renderGrid();
-      return;
-    }
-
-    if (e.target.classList.contains("seq-input")) {
-      moveRowTo(idx, parseInt(e.target.value, 10) || idx + 1);
-      return;
-    }
-
-    var f = e.target.dataset.field;
-
-    /* 브랜드 선택 — 목록 값 또는 '직접 입력'으로 전환 */
-    if (f === "brand" && e.target.classList.contains("brand-select")) {
-      if (e.target.value === UI.BRAND_CUSTOM) {
-        it.brand_custom = true;
-        setDirty(true);   // 직접 입력으로 바꿔도 기존 브랜드명은 초기값으로 유지합니다
-        UI.renderGrid();
-        var custom = document.querySelector('tr[data-id="' + it.id + '"] .brand-custom');
-        if (custom) { custom.focus(); custom.select(); }
-        return;
-      }
-      it.brand_custom = false;
-      it.brand = e.target.value;
-      e.target.classList.toggle("is-empty", !it.brand);
-      e.target.title = it.brand || "브랜드를 선택하거나 직접 입력하세요";
-      setDirty(true);
-      return;
-    }
-
-    if (f && e.target.tagName === "SELECT") {
-      it[f] = e.target.value;
-      setDirty(true);
     }
   });
 
+  /* 값 복사만 처리합니다. 행 클릭으로 상품 모달을 여는 동작은 상품 모달 쪽에서 다룹니다. */
   if (body) body.addEventListener("click", function (e) {
     var copyBtn = e.target.closest(".copy-btn");
-    if (copyBtn) { copyText(copyBtn.dataset.copy); return; }
-
-    var goBtn = e.target.closest(".btn-go");
-    if (goBtn) { window.open(goBtn.dataset.url, "_blank", "noopener,noreferrer"); return; }
-
-    var mini = e.target.closest(".mini-btn");
-    if (!mini) return;
-    var tr = mini.closest("tr[data-id]");
-    var idx = findIndex(tr.dataset.id);
-    if (idx < 0) return;
-    if (mini.dataset.act === "up") moveRow(idx, -1);
-    else if (mini.dataset.act === "down") moveRow(idx, 1);
-    else if (mini.dataset.act === "del") deleteRow(idx);
-    else if (mini.dataset.act === "brand-list") brandToList(idx);
+    if (copyBtn) { e.stopPropagation(); copyText(copyBtn.dataset.copy); }
   });
 
   /* 저장하지 않고 이탈할 때 경고 */
@@ -590,6 +428,20 @@ function bindEvents() {
   });
 }
 
+/* 표 가로 스크롤 그림자와 고정 열 모드 재계산 */
+function bindTableViewport() {
+  var wrap = document.getElementById("tableWrap");
+  if (wrap) wrap.addEventListener("scroll", function () {
+    wrap.classList.toggle("is-scrolled", wrap.scrollLeft > 0);
+  }, { passive: true });
+
+  var frame = null;
+  window.addEventListener("resize", function () {
+    if (frame) cancelAnimationFrame(frame);
+    frame = requestAnimationFrame(function () { frame = null; UI.handleResize(); });
+  });
+}
+
 function closeSidebar() {
   document.body.classList.remove("sidebar-open");
 }
@@ -606,16 +458,16 @@ function restoreSidebar() {
 
 /* ---------- 열 너비 드래그 ---------- */
 function bindColumnResize() {
-  var head = document.querySelector("#grid thead");
+  var head = document.getElementById("gridHead");
   if (!head) return;
 
   head.addEventListener("mousedown", function (e) {
     var handle = e.target.closest(".col-resizer");
     if (!handle) return;
-    var th = handle.closest("th[data-col]");
+    var th = handle.closest("th[data-col-key]");
     if (!th) return;
 
-    var key = UI.colKeyAt(Number(th.dataset.col));
+    var key = th.dataset.colKey;
     if (!key) return;
 
     e.preventDefault();
@@ -640,10 +492,9 @@ function bindColumnResize() {
   head.addEventListener("dblclick", function (e) {
     var handle = e.target.closest(".col-resizer");
     if (!handle) return;
-    var th = handle.closest("th[data-col]");
+    var th = handle.closest("th[data-col-key]");
     if (!th) return;
-    var key = UI.colKeyAt(Number(th.dataset.col));
-    if (key) UI.autoFitColumn(key);
+    if (th.dataset.colKey) UI.autoFitColumn(th.dataset.colKey);
   });
 }
 
@@ -675,6 +526,7 @@ function bindColSettings() {
     e.stopPropagation();
     if (panel.hidden) { UI.renderColPanel(); panel.hidden = false; }
     else panel.hidden = true;
+    btn.setAttribute("aria-expanded", String(!panel.hidden));
   });
 
   // 패널 안 클릭은 닫히지 않도록
@@ -696,16 +548,20 @@ function bindColSettings() {
   });
 
   // 바깥을 클릭하면 패널을 닫습니다.
-  document.addEventListener("click", function () { panel.hidden = true; });
+  document.addEventListener("click", function () { panel.hidden = true; btn.setAttribute("aria-expanded", "false"); });
 }
 
 /* ---------- 엑셀 불러오기 ---------- */
 var pendingImport = null;
 
 function bindImport() {
-  document.getElementById("btnImport").addEventListener("click", function () {
-    if (!State.currentListId) { toast("먼저 리스트를 만들거나 선택해 주세요", "warn"); return; }
-    document.getElementById("fileInput").click();
+  ["btnImport", "btnImportSide"].forEach(function (id) {
+    var button = document.getElementById(id);
+    if (!button) return;
+    button.addEventListener("click", function () {
+      if (!State.currentListId) { toast("먼저 리스트를 만들거나 선택해 주세요", "warn"); return; }
+      document.getElementById("fileInput").click();
+    });
   });
 
   document.getElementById("fileInput").addEventListener("change", async function (e) {
@@ -870,6 +726,7 @@ function onRemote() {
   bindImport();
   bindLeaveModal();
   bindColSettings();
+  bindTableViewport();
   try { State.hiddenCols = await Api.fetchHiddenCols(); } catch (e) { State.hiddenCols = []; }
   UI.updateHideStyle();
   UI.applyColWidths();
