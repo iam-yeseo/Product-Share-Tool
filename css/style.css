@@ -451,13 +451,18 @@ body.sidebar-collapsed .main { margin-left: 0; }
 .grid tbody tr.is-selected .c-check { box-shadow: inset 3px 0 0 var(--bg-brand); }
 .grid tbody tr:last-child td { border-bottom: 0; }
 .grid tbody tr[data-id] { cursor: pointer; }
+/* 목록에 반영된 행을 잠깐 강조합니다. 배경색만 겹쳐 두어 행 위치·높이는 변하지 않습니다. */
+.grid tbody tr.is-flash td {
+  background-image: linear-gradient(rgba(242, 116, 144, calc(var(--row-flash, 0) * .2)), rgba(242, 116, 144, calc(var(--row-flash, 0) * .2)));
+}
 
-.grid .c-name { text-align: left; padding-inline: var(--space-16); }
-.grid .c-note { text-align: left; }
-.grid .c-price { text-align: right; }
-.grid .c-price .ro-cell { justify-content: flex-end; }
-.grid .c-name .ro-cell { justify-content: flex-start; }
-.grid .c-note .ro-cell { justify-content: flex-start; }
+/* 머리글은 Figma의 그룹 중앙 정렬을 유지하고, 값 정렬은 본문 셀에만 적용합니다. */
+.grid tbody td.c-name { text-align: left; padding-inline: var(--space-16); }
+.grid tbody td.c-note { text-align: left; }
+.grid tbody td.c-price { text-align: right; }
+.grid tbody td.c-price .ro-cell { justify-content: flex-end; }
+.grid tbody td.c-name .ro-cell { justify-content: flex-start; }
+.grid tbody td.c-note .ro-cell { justify-content: flex-start; }
 
 /* 왼쪽 고정 열 — 불투명 배경 + 행 상태 반영 */
 .grid .pin { position: sticky; z-index: 2; background: var(--row-bg); }
@@ -490,11 +495,21 @@ body.resizing { cursor: col-resize; user-select: none; }
 .ro-text { min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ro-empty { color: var(--text-placeholder); }
 .price-ro { font-variant-numeric: tabular-nums; }
-.copy-btn {
+.copy-group {
   position: absolute;
   top: 50%;
   right: 0;
   z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: var(--space-8);
+  background: linear-gradient(to right, transparent, var(--row-bg, var(--bg-surface)) var(--space-8));
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity var(--dur-1) var(--ease-out);
+}
+.copy-btn {
   display: inline-grid;
   place-items: center;
   width: 22px;
@@ -504,17 +519,22 @@ body.resizing { cursor: col-resize; user-select: none; }
   border-radius: var(--radius-sm);
   background: var(--row-bg, var(--bg-surface));
   color: var(--text-tertiary);
-  font-size: 11px;
-  line-height: 1;
-  opacity: 0;
-  transform: translateY(-50%);
-  transition: opacity var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
+  font: 500 11px/1 var(--font-sans);
+  transition: border-color var(--dur-1) var(--ease-out), color var(--dur-1) var(--ease-out);
 }
-.grid tbody tr:hover .copy-btn, .copy-btn:focus-visible { opacity: 1; }
+/* 금액은 오른쪽 정렬이라 복사 버튼을 왼쪽 여백에 두어 숫자를 가리지 않게 합니다. */
+.grid tbody td.c-price .copy-group {
+  right: auto;
+  left: 0;
+  padding: 0 var(--space-8) 0 0;
+  background: linear-gradient(to left, transparent, var(--row-bg, var(--bg-surface)) var(--space-8));
+}
+.grid tbody tr:hover .copy-group, .copy-group:focus-within { opacity: 1; }
 .copy-btn:hover { border-color: var(--border-brand); color: var(--text-brand); }
 /* 터치 환경에는 hover가 없으므로 복사 버튼을 항상 보이게 두고 조작 영역을 넓힙니다. */
 @media (hover: none) {
-  .copy-btn { position: static; width: 26px; height: 26px; opacity: 1; transform: none; }
+  .copy-group { position: static; padding-left: 0; background: none; opacity: 1; transform: none; }
+  .copy-btn { width: 26px; height: 26px; }
   .ro-cell { gap: var(--space-6); }
   .ro-text { flex: 0 1 auto; }
   .grid tbody td { height: 44px; }

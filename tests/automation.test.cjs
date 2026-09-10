@@ -185,3 +185,16 @@ test('image address generation follows product info until 직접 입력 override
  const fresh=C.normalize({});
  assert.equal(fresh.generator.brandManual,false);assert.equal(fresh.generator.productManual,false);
 });
+test('smartstore product names replace slashes with a single space',()=>{
+ assert.equal(C.smartName('ABC/DEF 상품명'),'ABC DEF 상품명');
+ assert.equal(C.smartName('A / B //C'),'A B C');
+ assert.equal(C.smartName('  앞뒤 공백  '),'앞뒤 공백');
+ assert.equal(C.smartName('슬래시없음'),'슬래시없음');
+ assert.equal(C.smartName(null),'');
+ /* 원문의 닫는 태그(`</font>`)가 규칙에 걸려 깨지지 않아야 합니다. */
+ const raw='<font color="#ff0000">특가</font> 제이비엘/JBL 스피커';
+ assert.equal(C.smartName(raw),'특가 제이비엘 JBL 스피커');
+ assert.equal(C.displayName(raw),'특가 제이비엘/JBL 스피커');
+ /* 직접 입력 중에는 `/` 만 바꾸고 공백은 건드리지 않습니다. */
+ assert.equal(C.smartNameInput('A/B '),'A B ');
+});

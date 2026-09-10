@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>설정 · CALLTO</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="stylesheet" href="../css/style.css">
@@ -27,7 +28,7 @@
   </section>
   <div id="settingsError" class="settings-error" hidden></div>
 
-  <div class="settings-tabs" id="categoryTabs" role="tablist" aria-label="카테고리 설정 항목" hidden>
+  <div class="settings-tabs seg-tabs" id="categoryTabs" role="tablist" aria-label="카테고리 설정 항목" hidden>
     <button class="seg-tab" type="button" role="tab" data-cat-tab="retail" aria-selected="false">소비자몰 카테고리</button>
     <button class="seg-tab" type="button" role="tab" data-cat-tab="wholesale" aria-selected="false">도매몰 카테고리</button>
     <button class="seg-tab" type="button" role="tab" data-cat-tab="folders" aria-selected="false">이미지 폴더</button>
@@ -72,9 +73,11 @@
   <p class="field-note">변경 반영 후 상단의 <b>설정 저장</b>을 눌러야 공유됩니다.</p>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0"></script>
 <script src="../js/supabaseClient.js"></script>
 <script src="../js/utils.js"></script>
+<script src="../js/motion.js"></script>
 <script src="../js/automation-core.js"></script>
 <script src="../js/brand-defaults.js"></script>
 <script src="../js/api.js"></script>

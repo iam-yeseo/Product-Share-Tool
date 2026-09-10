@@ -109,6 +109,7 @@ async function save() {
     setDirty(false);
     State.remoteChanged = false;
     toast("저장했습니다");
+    if (typeof Motion !== "undefined") Motion.pulse(btn);
     await refreshSidebar();
     await reloadCurrent();
     return true;
@@ -250,18 +251,7 @@ function bindEvents() {
 
   document.getElementById("btnNewList").addEventListener("click", async function () {
     if (!(await confirmLeave())) return;
-    var title = prompt("새 리스트 이름을 입력하세요", fmtDate(new Date()) + " 상품 등록 요청");
-    if (title === null) return;
-    try {
-      var created = await Api.createList((title || "").trim() || "제목 없는 리스트");
-      await refreshSidebar();
-      await loadList(created.id);
-      if (!State.items.length) document.getElementById("btnAddRow").focus();
-      closeSidebar();
-    } catch (e) {
-      console.error(e);
-      toast("리스트를 만들지 못했습니다: " + (e.message || e), "error");
-    }
+    openNewListWizard();
   });
 
   document.getElementById("listNav").addEventListener("click", async function (e) {
@@ -408,7 +398,11 @@ function bindEvents() {
   /* 값 복사만 처리합니다. 행 클릭으로 상품 모달을 여는 동작은 상품 모달 쪽에서 다룹니다. */
   if (body) body.addEventListener("click", function (e) {
     var copyBtn = e.target.closest(".copy-btn");
-    if (copyBtn) { e.stopPropagation(); copyText(copyBtn.dataset.copy); }
+    if (copyBtn) {
+      e.stopPropagation();
+      copyText(copyBtn.dataset.copy);
+      if (typeof Motion !== "undefined") Motion.pulse(copyBtn);
+    }
   });
 
   /* 저장하지 않고 이탈할 때 경고 */
@@ -439,6 +433,104 @@ function bindTableViewport() {
   window.addEventListener("resize", function () {
     if (frame) cancelAnimationFrame(frame);
     frame = requestAnimationFrame(function () { frame = null; UI.handleResize(); });
+  });
+}
+
+/* ---------- 새 리스트 만들기 (1. 이름 → 2. 시작 방법) ---------- */
+var newListStep = 1;
+
+function newListNodes() {
+  return {
+    dialog: document.getElementById("newListDialog"),
+    name: document.getElementById("newListName"),
+    label: document.getElementById("newListStepLabel"),
+    back: document.getElementById("newListBack"),
+    next: document.getElementById("newListNext"),
+    steps: document.querySelectorAll("#newListDialog .wizard-step")
+  };
+}
+
+function renderNewListStep(animate) {
+  var n = newListNodes();
+  n.steps.forEach(function (step) { step.hidden = Number(step.dataset.step) !== newListStep; });
+  n.back.hidden = newListStep === 1;
+  n.next.textContent = newListStep === 1 ? "다음" : "리스트 만들기";
+  n.label.textContent = newListStep + " / 2 단계 · " + (newListStep === 1 ? "리스트 이름" : "시작 방법");
+  var visible = document.querySelector('#newListDialog .wizard-step[data-step="' + newListStep + '"]');
+  if (animate && typeof Motion !== "undefined") Motion.enter(visible);
+}
+
+function openNewListWizard() {
+  var n = newListNodes();
+  if (!n.dialog) return;
+  newListStep = 1;
+  n.name.value = fmtDate(new Date()) + " 상품 등록 요청";
+  var excel = document.querySelector('#newListDialog input[name="newListStart"][value="excel"]');
+  if (excel) excel.checked = true;
+  renderNewListStep(false);
+  AutomationEditor.openDialog(n.dialog);
+  n.name.focus();
+  n.name.select();
+}
+
+function closeNewListWizard() {
+  return new Promise(function (resolve) {
+    AutomationEditor.closeDialog(document.getElementById("newListDialog"), resolve);
+  });
+}
+
+async function submitNewList() {
+  var n = newListNodes();
+  if (newListStep === 1) {
+    if (!n.name.value.trim()) { toast("리스트 이름을 입력해 주세요", "warn"); n.name.focus(); return; }
+    newListStep = 2;
+    renderNewListStep(true);
+    var first = document.querySelector('#newListDialog input[name="newListStart"]:checked');
+    if (first) first.focus();
+    return;
+  }
+  var mode = (document.querySelector('#newListDialog input[name="newListStart"]:checked') || {}).value || "manual";
+  n.next.disabled = true;
+  n.next.textContent = "만드는 중…";
+  try {
+    var created = await Api.createList(n.name.value.trim() || "제목 없는 리스트");
+    await refreshSidebar();
+    await loadList(created.id);
+    /* 모달이 겹치지 않도록 위저드가 완전히 닫힌 뒤에 다음 단계를 시작합니다. */
+    await closeNewListWizard();
+    closeSidebar();
+    startNewList(mode);
+  } catch (e) {
+    console.error(e);
+    toast("리스트를 만들지 못했습니다: " + (e.message || e), "error");
+  } finally {
+    n.next.disabled = false;
+    renderNewListStep(false);
+  }
+}
+
+/* 만든 직후 고른 방식으로 이어 갑니다.
+   파일 선택 창은 브라우저가 막을 수 있으므로 엑셀 불러오기 버튼에 초점도 함께 둡니다. */
+function startNewList(mode) {
+  if (mode === "excel") {
+    var button = document.getElementById("btnImport");
+    if (button) button.focus();
+    try { document.getElementById("fileInput").click(); } catch (e) { /* 무시 */ }
+    toast("엑셀 파일을 선택해 주세요");
+    return;
+  }
+  addRow();
+}
+
+function bindNewListWizard() {
+  var n = newListNodes();
+  if (!n.dialog) return;
+  n.next.addEventListener("click", submitNewList);
+  n.back.addEventListener("click", function () { newListStep = 1; renderNewListStep(true); n.name.focus(); });
+  document.getElementById("newListCancel").addEventListener("click", function () { closeNewListWizard(); });
+  n.dialog.addEventListener("cancel", function (event) { event.preventDefault(); closeNewListWizard(); });
+  n.name.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") { event.preventDefault(); submitNewList(); }
   });
 }
 
@@ -727,6 +819,7 @@ function onRemote() {
   bindLeaveModal();
   bindColSettings();
   bindTableViewport();
+  bindNewListWizard();
   try { State.hiddenCols = await Api.fetchHiddenCols(); } catch (e) { State.hiddenCols = []; }
   UI.updateHideStyle();
   UI.applyColWidths();

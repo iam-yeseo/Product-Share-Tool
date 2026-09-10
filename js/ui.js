@@ -32,11 +32,12 @@ var UI = (function () {
   ];
   var WIDE_PINS = ['check', 'seq', 'brand', 'name_own'];
   var COPY_LABELS = {
-    brand: '브랜드 복사', name_own: '상품명 복사', model: '모델명 복사',
+    brand: '브랜드 복사', name_own: '상품명 복사', name_naver: '스마트스토어 상품명 복사', model: '모델명 복사',
     price_retail: '소매 판매가 복사', price_wholesale: '도매(베이직) 금액 복사',
     price_wholesale_master: '도매(마스터) 금액 복사', price_naver: '네이버 가격 복사',
     ref_link: '참고링크 복사', note: '비고 복사'
   };
+  var COPY_GLYPHS = { name_naver: 'N' };
 
   var COL_W_KEY = 'productTool.calltoColWidths';
   var colW = {}, pinMode = 'wide';
@@ -167,17 +168,31 @@ var UI = (function () {
   /* ---------- 셀 ---------- */
   function copyButton(key, value) {
     if (!value) return '';
-    return '<button type="button" class="copy-btn" data-copy="' + esc(value) + '" aria-label="' + esc(COPY_LABELS[key] || '복사') + '" title="' + esc(COPY_LABELS[key] || '복사') + '">⧉</button>';
+    var label = COPY_LABELS[key] || '복사';
+    return '<button type="button" class="copy-btn" data-copy="' + esc(value) + '" aria-label="' + esc(label) + '" title="' + esc(label) + '">' + (COPY_GLYPHS[key] || '⧉') + '</button>';
+  }
+  /* copies: [[key, value], …] — 한 셀에서 여러 값을 각각 복사할 수 있습니다. */
+  function copyGroup(copies) {
+    var buttons = (copies || []).map(function (pair) { return copyButton(pair[0], pair[1]); }).join('');
+    return buttons ? '<span class="copy-group">' + buttons + '</span>' : '';
   }
   function ro(value, key, copyValue) {
     var text = value === null || value === undefined ? '' : String(value);
     if (!text.trim()) return '<span class="ro-empty">—</span>';
     return '<span class="ro-cell"><span class="ro-text" title="' + esc(text) + '">' + esc(text) + '</span>' +
-      (key ? copyButton(key, copyValue === undefined ? text : copyValue) : '') + '</span>';
+      (key ? copyGroup([[key, copyValue === undefined ? text : copyValue]]) : '') + '</span>';
   }
   function price(value, key) {
     if (value === null || value === undefined || value === '') return '<span class="ro-empty">—</span>';
-    return '<span class="ro-cell"><span class="ro-text price-ro">' + esc(fmtWon(value)) + '</span>' + copyButton(key, String(value)) + '</span>';
+    return '<span class="ro-cell"><span class="ro-text price-ro">' + esc(fmtWon(value)) + '</span>' + copyGroup([[key, String(value)]]) + '</span>';
+  }
+  /* 상품명 셀은 원문과 스마트스토어용 상품명을 각각 복사할 수 있습니다. */
+  function nameCell(item) {
+    var raw = item.name_own || '', text = AutomationCore.displayName(raw);
+    if (!text.trim()) return '<span class="ro-empty">—</span>';
+    var smart = item.name_naver || AutomationCore.smartName(raw);
+    return '<span class="ro-cell"><span class="ro-text" title="' + esc(text) + '">' + esc(text) + '</span>' +
+      copyGroup([['name_own', raw], ['name_naver', smart]]) + '</span>';
   }
   function need(value) {
     if (!value) return '<span class="ro-empty">—</span>';
@@ -188,7 +203,7 @@ var UI = (function () {
     if (!name) return '<span class="ro-empty">—</span>';
     var registered = typeof AutomationEditor !== 'undefined' && AutomationEditor.brands ? AutomationCore.matchBrand(AutomationEditor.brands(), name) : null;
     return '<span class="ro-cell"><span class="ro-text" title="' + esc(name) + '">' + esc(name) + '</span>' +
-      (!registered ? '<span class="brand-tag">직접 입력</span>' : '') + copyButton('brand', name) + '</span>';
+      (!registered ? '<span class="brand-tag">직접 입력</span>' : '') + copyGroup([['brand', name]]) + '</span>';
   }
 
   function cellHtml(item, key, index) {
@@ -201,7 +216,7 @@ var UI = (function () {
     if (key === 'seq') return '<span class="seq-ro">' + (index + 1) + '</span>';
     if (key === 'brand') return brandCell(item);
     /* 상품명은 HTML 원문을 보존하고 화면에는 읽기용 텍스트만 표시합니다. */
-    if (key === 'name_own') return ro(AutomationCore.displayName(item.name_own), 'name_own', item.name_own || '');
+    if (key === 'name_own') return nameCell(item);
     if (key === 'model') return ro(item.model, 'model');
     if (key.indexOf('need_') === 0) return need(item[key]);
     if (key === 'price_naver') return price(item.price_retail, 'price_naver');
@@ -246,9 +261,9 @@ var UI = (function () {
       if (!col.group) {
         var label = col.label;
         if (key === 'check') {
-          label = State.view === 'registrar' ? '완료' : '체크';
-          label = '<span class="th-check"><span class="th-label">' + label + '</span>' +
-            (editor ? '<input type="checkbox" id="chkAll" class="chk-all only-editor" aria-label="전체 선택 / 해제">' : '') + '</span>';
+          label = editor
+            ? '<span class="th-check"><input type="checkbox" id="chkAll" class="chk-all only-editor" aria-label="전체 선택 / 해제"></span>'
+            : '<span class="th-check"><span class="th-label">완료</span></span>';
         } else { label = esc(label); }
         top += '<th class="' + classes.concat('th-span').join(' ') + '" rowspan="2" scope="col" data-col-key="' + key + '">' + label + resizer + '</th>';
         return;

@@ -21,6 +21,11 @@ dialog { color: var(--text-primary); }
 .app-dialog.is-closing::backdrop { animation: fade-out var(--dur-2) var(--ease-in) forwards; }
 
 .dialog-shell { display: flex; flex-direction: column; min-height: 0; max-height: calc(100dvh - 32px); }
+/* 상품 모달 높이는 '기본 설정' 탭 높이로 고정합니다.
+   높이는 모달을 열 때 실제로 측정해 --product-modal-h 로 넣고,
+   이미지 설정처럼 더 긴 내용은 모달을 늘리지 않고 본문에서 스크롤합니다. */
+.product-dialog { height: var(--product-modal-h, auto); }
+.product-dialog .dialog-shell { height: 100%; }
 .dialog-head {
   flex: none;
   display: flex;
@@ -47,8 +52,36 @@ dialog { color: var(--text-primary); }
 }
 .dialog-foot .foot-note { margin-right: auto; color: var(--text-tertiary); font: 400 11px/15px var(--font-sans); }
 
-/* 세그먼트 탭 (Navigation / Tab Item) */
-.seg-tabs { display: inline-flex; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-md); background: var(--bg-muted); }
+/* 세그먼트 탭 (Navigation / Tab Item) — 선택 표시는 인디케이터가 미끄러지듯 이동합니다. */
+.seg-tabs { position: relative; display: inline-flex; flex-wrap: nowrap; gap: var(--space-4); padding: var(--space-4); border-radius: var(--radius-md); background: var(--bg-muted); }
+.seg-indicator { position: absolute; top: var(--space-4); bottom: var(--space-4); left: 0; width: 0; border-radius: var(--radius-sm); background: var(--bg-surface); box-shadow: var(--shadow-sm); pointer-events: none; }
+.seg-tabs.has-indicator .seg-tab { position: relative; z-index: 1; }
+.seg-tabs.has-indicator .seg-tab[aria-selected="true"], .seg-tabs.has-indicator .seg-tab.is-active { background: transparent; box-shadow: none; }
+
+/* 새 리스트 만들기 (이름 입력 → 시작 방법) */
+.wizard-dialog { width: min(520px, calc(100vw - 32px)); }
+.wizard-dialog .dialog-head { min-height: 0; }
+.wizard-dialog .dialog-head h2 { font-size: 18px; line-height: 26px; }
+.wizard-step { padding: var(--space-20) 0 var(--space-8); }
+.choice-cards { display: grid; gap: var(--space-8); margin-top: var(--space-12); }
+.choice-card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color var(--dur-1) var(--ease-out), background var(--dur-1) var(--ease-out);
+}
+.choice-card:hover { border-color: var(--border-strong); }
+.choice-card:has(input:checked) { border-color: var(--border-brand); background: var(--bg-brand-subtle); }
+.choice-card:focus-within { border-color: var(--border-focus); }
+.choice-card input { margin-top: 1px; }
+.cc-main { display: grid; gap: 2px; min-width: 0; }
+.cc-main b { font: 500 14px/20px var(--font-sans); color: var(--text-primary); }
+.cc-main small { font: 400 12px/17px var(--font-sans); color: var(--text-tertiary); }
 
 /* ===== 모달 섹션 & 필드 그리드 =========================================== */
 .modal-section { padding: var(--space-24) 0; border-bottom: 1px solid var(--border-default); }

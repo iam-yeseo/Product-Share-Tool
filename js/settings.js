@@ -36,6 +36,9 @@
       button.setAttribute('aria-selected', String(active));
     });
   }
+  function syncTabIndicator(animate) {
+    if (typeof Motion !== 'undefined') Motion.segTabs(byId('categoryTabs'), animate);
+  }
   /* 요청한 화면만 보여 줍니다. 카테고리 화면 진입 중 브랜드 화면이 잠깐 나타나지 않습니다. */
   function paintSections(loaded) {
     var brandsMode = page === 'brands';
@@ -129,6 +132,7 @@
       history.replaceState(null, '', address);
       paintChrome();
       paintSections(true);
+      syncTabIndicator(true);
       showCurrent();
     });
   });
@@ -198,6 +202,7 @@
       revision = row.updated_at;
       showCurrent();
       paintSections(true);
+      syncTabIndicator(false);
       byId('settingsState').textContent = '저장된 설정';
       document.querySelector('main').inert = false;
     } catch (e) {
