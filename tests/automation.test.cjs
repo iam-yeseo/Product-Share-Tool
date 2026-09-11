@@ -198,3 +198,25 @@ test('smartstore product names replace slashes with a single space',()=>{
  /* 직접 입력 중에는 `/` 만 바꾸고 공백은 건드리지 않습니다. */
  assert.equal(C.smartNameInput('A/B '),'A B ');
 });
+test('image links preserve mixed-case destinations, escape attributes and keep legacy HTML',()=>{
+ const plain={folder:'system',filename:'promo.png'};
+ const linked={...plain,linkEnabled:true,linkUrl:'https://www.callamedia.co.kr/Goods/View?goodsNo=1000007906&Code=AbC"<x>'};
+ assert.match(C.html([linked,plain]), /<a href="https:\/\/www.callamedia.co.kr\/Goods\/View\?goodsNo=1000007906&amp;Code=AbC&quot;&lt;x&gt;" target="_blank" rel="noopener noreferrer"><img src="https:\/\/calla.hgodo.com\/product\/system\/promo.png"><\/a>\n  <img/);
+ assert.equal(C.html([{...linked,linkEnabled:false}]),C.html([plain]));
+ const item={automation:{detailImages:[linked]}};
+ const restored=C.normalize(JSON.parse(JSON.stringify(item.automation)));
+ assert.deepEqual(restored.detailImages,[linked]);
+ const exported=C.exportItem(item,settings);
+ assert.equal(exported.detailImages[0].linkUrl,linked.linkUrl);
+ assert.equal(exported.detailImages[0].linkEnabled,true);
+ assert.equal(exported.detailHtml,C.html([linked]));
+});
+test('enabled invalid image links block HTML and surface readiness issues',()=>{
+ for (const linkUrl of ['', 'javascript:alert(1)', 'data:text/html,test', '//example.com', 'https://', 'https://exa mple.com','https://example.com/\npath','https://user:pass@example.com']) {
+  const image={folder:'system',filename:'promo.png',linkEnabled:true,linkUrl};
+  assert.equal(C.html([image]),'');
+  assert.ok(C.readyIssues({automation:{detailImages:[image]}},settings).some(x=>x.includes('바로가기 링크')));
+  assert.notEqual(C.html([{...image,linkEnabled:false}]),'');
+ }
+ assert.equal(C.imageLinkUrl({linkUrl:' https://example.com/Path?Key=AbC '}),'https://example.com/Path?Key=AbC');
+});
