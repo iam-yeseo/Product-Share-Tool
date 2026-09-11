@@ -277,3 +277,6 @@ dialog { color: var(--text-primary); }
   .dialog-foot .foot-note { flex: 1 0 100%; margin: 0 0 var(--space-8); }
   .dialog-foot .btn { flex: 1; }
 }
+
+.image-link-settings { display: grid; gap: var(--space-8); margin-top: var(--space-12); }
+.image-link-settings [hidden] { display: none; }

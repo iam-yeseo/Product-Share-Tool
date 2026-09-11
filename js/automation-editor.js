@@ -190,6 +190,10 @@ var AutomationEditor = (function () {
         '<div class="image-row-actions"><button class="btn btn-neutral btn-sm" data-image-action="check">검사</button>' +
         '<a class="btn btn-text btn-sm image-link" target="_blank" rel="noopener">원본 열기</a>' +
         '<span class="image-status" aria-live="polite"></span></div>' +
+        '<div class="image-link-settings"><label class="check-line"><input type="checkbox" data-image-link-enabled' + (image.linkEnabled === true ? ' checked' : '') + (ro ? ' disabled' : '') + ' aria-controls="image-link-' + esc(imageId) + '"><span>바로가기 링크</span></label>' +
+        '<div id="image-link-' + esc(imageId) + '" data-image-link-fields' + (image.linkEnabled === true ? '' : ' hidden') + '><label class="field"><span>연결할 페이지 주소</span>' +
+        '<input type="url" data-image-link-url aria-label="이미지 ' + (index + 1) + ' 바로가기 링크" aria-describedby="image-link-note-' + esc(imageId) + '" value="' + esc(image.linkUrl || '') + '" placeholder="https://www.callamedia.co.kr/goods/goods_view.php?goodsNo=1000007906"' + (ro ? ' readonly' : '') + '>' +
+        '<span class="field-note" id="image-link-note-' + esc(imageId) + '">이미지를 클릭하면 새 창에서 열립니다.</span><span class="field-warning" data-image-link-error aria-live="polite"></span></label></div></div>' +
         '<details class="image-preview"><summary>이미지 미리보기</summary><div class="image-preview-box"></div></details></article>';
     }).join('');
     document.getElementById('detailImageRows').innerHTML = rows || '<p class="empty-hint">등록한 상세 이미지가 없습니다.</p>';
@@ -217,6 +221,11 @@ var AutomationEditor = (function () {
       if (!row) return;
       var url = AutomationCore.imageUrl(image), validation = AutomationCore.validation(image), status = checking.has(image.id) ? 'checking' : (!url ? 'invalid' : validation.status);
       row.querySelector('.image-url').value = url;
+      var linkIssue = AutomationCore.imageLinkIssue(image);
+      var linkInput = row.querySelector('[data-image-link-url]');
+      linkInput.setAttribute('aria-invalid', String(!!linkIssue));
+      linkInput.classList.toggle('is-error', !!linkIssue);
+      row.querySelector('[data-image-link-error]').textContent = linkIssue;
       var link = row.querySelector('.image-link'); link.hidden = !url; if (url) link.href = url; else link.removeAttribute('href');
       var label = row.querySelector('.image-status'); label.dataset.status = status; label.textContent = statusLabels[status] + (status === 'valid' ? ' · ' + validation.width + ' × ' + validation.height : '');
       row.querySelector('[data-image-action="check"]').disabled = !url || status === 'checking';
@@ -470,6 +479,10 @@ var AutomationEditor = (function () {
       }
       if (event.target.dataset.basic === 'origin-custom') { item.automation.origin = Workspace.originOutput('custom', event.target.value.replace(/[^A-Za-z .'-]/g, '')); updateOriginPreview(); touch(); return; }
       if (event.target.dataset.generator) { data(item).generator[event.target.dataset.generator] = event.target.value; touch(); return; }
+      if (event.target.hasAttribute('data-image-link-url')) {
+        var linkRow = event.target.closest('[data-image-id]'), linkImage = data(item).detailImages.find(function (candidate) { return candidate.id === linkRow.dataset.imageId; });
+        linkImage.linkUrl = event.target.value; touch(); updateOutputs(); return;
+      }
       if (event.target.dataset.imageField) {
         var row = event.target.closest('[data-image-id]'), image = data(item).detailImages.find(function (candidate) { return candidate.id === row.dataset.imageId; });
         image[event.target.dataset.imageField] = event.target.value.toLowerCase().trim();
@@ -479,6 +492,14 @@ var AutomationEditor = (function () {
 
     dialog.addEventListener('change', async function (event) {
       var item = current(); if (!item || State.view !== 'editor') return;
+      if (event.target.hasAttribute('data-image-link-enabled')) {
+        var linkRow = event.target.closest('[data-image-id]'), linkImage = data(item).detailImages.find(function (candidate) { return candidate.id === linkRow.dataset.imageId; });
+        linkImage.linkEnabled = event.target.checked;
+        linkRow.querySelector('[data-image-link-fields]').hidden = !linkImage.linkEnabled;
+        touch(); updateOutputs();
+        if (linkImage.linkEnabled) linkRow.querySelector('[data-image-link-url]').focus();
+        return;
+      }
       if (event.target.hasAttribute('data-naver-mode')) {
         if (event.target.checked) {
           data(item).naverNameMode = 'manual'; renderBasic();
@@ -534,7 +555,7 @@ var AutomationEditor = (function () {
       try {
         var action = button.dataset.action, a = data(item);
         if (action === 'check-all') { button.disabled = true; await checkAll([item]); button.disabled = false; return; }
-        if (action === 'copy-html') { var html = AutomationCore.html(a.detailImages); if (!html) throw new Error('이미지 주소를 먼저 확인해 주세요.'); copyText(html); return; }
+        if (action === 'copy-html') { var html = AutomationCore.html(a.detailImages); if (!html) throw new Error('이미지 주소와 바로가기 링크를 확인해 주세요.'); copyText(html); return; }
         if (action === 'copy-thumb') { copyText(item.image_url); return; }
         if (action === 'remove-thumb') { thumbnailChecks.delete(item.id); if (pending.has(item.id)) URL.revokeObjectURL(pending.get(item.id).preview); pending.delete(item.id); item.image_url = ''; delete a.thumbnail; touch(); renderImagesTab(); return; }
         if (button.dataset.imageAction) {

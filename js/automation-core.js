@@ -132,9 +132,20 @@ var AutomationCore = (function () {
     if (!imageUrl(images[0])) throw new Error('이미지 폴더를 선택해 주세요.');
     return images;
   }
+  function imageLinkUrl(image) {
+    var value = String(image.linkUrl || '').trim();
+    if (!/^https?:\/\//i.test(value) || /[\s\u0000-\u001f\u007f]/.test(value)) return '';
+    try { var parsed = new URL(value); return parsed.hostname && !parsed.username && !parsed.password ? value : ''; } catch (e) { return ''; }
+  }
+  function imageLinkIssue(image) {
+    return image.linkEnabled === true && !imageLinkUrl(image) ? '바로가기 링크에 http:// 또는 https://로 시작하는 올바른 주소를 입력해 주세요.' : '';
+  }
+  function htmlAttribute(value) {
+    return value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
   function html(images) {
-    if (!images.length || images.some(function (i) { return !imageUrl(i); })) return '';
-    return '<div align="center">\n' + images.map(function (i) { return '  <img src="' + imageUrl(i) + '">'; }).join('\n') + '\n</div>';
+    if (!images.length || images.some(function (i) { return !imageUrl(i) || imageLinkIssue(i); })) return '';
+    return '<div align="center">\n' + images.map(function (i) { var tag = '<img src="' + imageUrl(i) + '">'; return '  ' + (i.linkEnabled === true ? '<a href="' + htmlAttribute(imageLinkUrl(i)) + '" target="_blank" rel="noopener noreferrer">' + tag + '</a>' : tag); }).join('\n') + '\n</div>';
   }
   function validation(image) {
     var v = image.validation;
@@ -152,6 +163,7 @@ var AutomationCore = (function () {
     if (!item.image_url && !(item.done && a.thumbnail && a.thumbnail.deletedAt)) issues.push('썸네일 미등록');
     if (!a.detailImages.length) issues.push('상세 이미지 미등록');
     a.detailImages.forEach(function (img, i) {
+      if (imageLinkIssue(img)) issues.push((i + 1) + '번 이미지 ' + imageLinkIssue(img));
       if (!imageUrl(img)) issues.push((i + 1) + '번 이미지 주소 형식 오류');
       else if (validation(img).status !== 'valid') issues.push((i + 1) + '번 이미지 정상 확인 필요');
     });
@@ -163,7 +175,7 @@ var AutomationCore = (function () {
       brandCode: brand ? brand.code : '', brandRegistered: !!brand,
       categoryPaths: { retail: path(settings.categories.retail, a.categoryCodes.retail), wholesale: path(settings.categories.wholesale, a.categoryCodes.wholesale) },
       thumbnail: Object.assign({}, a.thumbnail, { url: item.image_url || '' }),
-      detailImages: a.detailImages.map(function (img, i) { return { order: i + 1, folder: img.folder, filename: img.filename, url: imageUrl(img), validation: validation(img) }; }),
+      detailImages: a.detailImages.map(function (img, i) { return { order: i + 1, folder: img.folder, filename: img.filename, url: imageUrl(img), linkEnabled: img.linkEnabled === true, linkUrl: String(img.linkUrl || ''), validation: validation(img) }; }),
       detailHtml: html(a.detailImages), issues: readyIssues(item, settings) });
   }
   function validateSettings(s) {
@@ -206,6 +218,6 @@ var AutomationCore = (function () {
     });
     return s;
   }
-  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, hangulInitials: hangulInitials, brandSearchText: brandSearchText, brandMatches: brandMatches, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, generate: generate, generatorValues: generatorValues, displayName: displayName, hasMarkup: hasMarkup, smartName: smartName, smartNameInput: smartNameInput, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
+  return { BASE: BASE, EXTENSIONS: EXTENSIONS, clone: clone, slug: slug, brandKey: brandKey, hangulInitials: hangulInitials, brandSearchText: brandSearchText, brandMatches: brandMatches, matchBrand: matchBrand, normalizeSettings: normalizeSettings, normalize: normalize, path: path, defaultFolder: defaultFolder, imageUrl: imageUrl, imageLinkUrl: imageLinkUrl, imageLinkIssue: imageLinkIssue, generate: generate, generatorValues: generatorValues, displayName: displayName, hasMarkup: hasMarkup, smartName: smartName, smartNameInput: smartNameInput, html: html, validation: validation, readyIssues: readyIssues, exportItem: exportItem, validateSettings: validateSettings };
 })();
 if (typeof module !== 'undefined') module.exports = AutomationCore;
