@@ -2,12 +2,14 @@
 
 var removedIds = [];   // 편집 중 삭제된 행 (저장 시 서버에서 삭제)
 var listLoadRevision = 0;
+var listInfoDraft = null;
 
 /* ---------- 데이터 로드 ---------- */
 async function refreshSidebar() {
   try {
     State.lists = await Api.fetchLists();
     UI.renderSidebar();
+    if (!State.currentListId) UI.renderListOverview();
   } catch (e) {
     console.error(e);
     UI.setSync("동기화 오류", "error");
@@ -95,10 +97,10 @@ async function save() {
   }
 
   var btn = document.getElementById("btnSave");
-  btn.disabled = true;
-  btn.textContent = "저장 중…";
+  if (btn) { btn.disabled = true; btn.textContent = "저장 중…"; }
   State.saving = true;
-  document.querySelector('.layout').inert = true;
+  var layout = document.querySelector('.layout');
+  if (layout) layout.inert = true;
   try {
     renumber();
     // 개편 화면에서는 스마트스토어 가격을 소비자몰 판매가의 읽기 전용 파생값으로 유지합니다.
@@ -116,12 +118,12 @@ async function save() {
   } catch (e) {
     console.error(e);
     toast("저장 실패: " + (e.message || e), "error");
-    btn.disabled = false;
+    if (btn) btn.disabled = false;
     return false;
   } finally {
-    btn.textContent = "저장하기";
+    if (btn) btn.textContent = "저장하기";
     State.saving = false;
-    document.querySelector('.layout').inert = false;
+    if (layout) layout.inert = false;
     AutomationEditor.publish();
   }
 }
@@ -195,7 +197,7 @@ function applyBrandMatching(items) {
 }
 
 /* ---------- 체크한 행 일괄 처리 (편집자 전용) ---------- */
-function copySelectedRows() {
+async function copySelectedRows() {
   var n = selectedCount();
   if (!n) { toast("복사할 행을 체크해 주세요", "warn"); return; }
 
@@ -210,10 +212,11 @@ function copySelectedRows() {
   setDirty(true);
   UI.renderGrid();
   UI.renderHead();
-  toast(n + "개 행을 복사했습니다");
+  toast(n + "개 행을 저장하는 중입니다");
+  await save();
 }
 
-function deleteSelectedRows() {
+async function deleteSelectedRows() {
   var targets = selectedItems();
   if (!targets.length) { toast("삭제할 행을 체크해 주세요", "warn"); return; }
   if (!confirm("체크한 " + targets.length + "개 행을 삭제할까요?\n저장하면 되돌릴 수 없습니다.")) return;
@@ -227,7 +230,83 @@ function deleteSelectedRows() {
   setDirty(true);
   UI.renderGrid();
   UI.renderHead();
-  toast(targets.length + "개 행을 삭제했습니다");
+  toast(targets.length + "개 행을 저장하는 중입니다");
+  await save();
+}
+
+function selectedListIds() {
+  return Object.keys(State.listSelected || {}).filter(function (id) { return State.listSelected[id]; });
+}
+
+function showOverview() {
+  AutomationEditor.clearPending();
+  State.currentListId = null;
+  State.list = null;
+  State.items = [];
+  State.registrations = {};
+  State.listSelected = {};
+  var address = new URL(location.href);
+  address.searchParams.delete('list');
+  history.replaceState(null, '', address);
+  updatePageLinks();
+  UI.renderAll();
+}
+
+async function createListFromOverview(mode) {
+  if (!(await confirmLeave())) return;
+  var title = fmtDate(new Date()) + ' 상품 등록 요청';
+  try {
+    var created = await Api.createList(title);
+    State.listSelected = {};
+    await refreshSidebar();
+    await loadList(created.id);
+    if (mode === 'excel') startNewList('excel');
+    else addRow();
+  } catch (e) {
+    console.error(e);
+    toast('리스트를 만들지 못했습니다: ' + (e.message || e), 'error');
+  }
+}
+
+async function duplicateSelectedLists() {
+  var ids = selectedListIds();
+  if (!ids.length) { toast('복제할 리스트를 선택해 주세요', 'warn'); return; }
+  try {
+    for (var i = 0; i < ids.length; i++) {
+      var source = await Api.fetchList(ids[i]);
+      var sourceItems = await Api.fetchItems(ids[i]);
+      if (!source) continue;
+      var created = await Api.createList((source.title || '제목 없는 리스트') + ' 복사본');
+      created.author = source.author || '';
+      created.work_date = source.work_date || todayISO();
+      created.note = source.note || '';
+      var copies = sourceItems.map(function (item) { return copyItem(item); });
+      await Api.saveDraft(created, copies, []);
+    }
+    State.listSelected = {};
+    await refreshSidebar();
+    UI.renderListOverview();
+    toast(ids.length + '개 리스트를 복제했습니다');
+  } catch (e) {
+    console.error(e);
+    toast('리스트 복제에 실패했습니다: ' + (e.message || e), 'error');
+  }
+}
+
+async function deleteSelectedLists() {
+  var ids = selectedListIds();
+  if (!ids.length) { toast('삭제할 리스트를 선택해 주세요', 'warn'); return; }
+  if (!confirm('선택한 ' + ids.length + '개 리스트를 삭제할까요?\n상품 정보도 모두 삭제되며 되돌릴 수 없습니다.')) return;
+  try {
+    for (var i = 0; i < ids.length; i++) await Api.deleteList(ids[i]);
+    State.listSelected = {};
+    await refreshSidebar();
+    UI.renderListOverview();
+    toast(ids.length + '개 리스트를 삭제했습니다');
+  } catch (e) {
+    console.error(e);
+    toast('리스트 삭제에 실패했습니다: ' + (e.message || e), 'error');
+  }
 }
 
 /* ---------- 이벤트 등록 ---------- */
@@ -241,61 +320,103 @@ function bindEvents() {
       if (await confirmLeave()) { setDirty(false); AutomationEditor.clearPending(); location.href = link.href; }
     });
   });
-  document.getElementById("btnSave").addEventListener("click", save);
+  var saveButton = document.getElementById("btnSave");
+  if (saveButton) saveButton.addEventListener("click", save);
 
-  /* 사이드바 */
-  document.getElementById("searchInput").addEventListener("input", function (e) {
+  /* 구버전 DOM을 열어도 오류 없이 동작하도록 목록 사이드바 이벤트는 선택적으로 연결합니다. */
+  var searchInput = document.getElementById("searchInput");
+  if (searchInput) searchInput.addEventListener("input", function (e) {
     State.search = e.target.value;
     UI.renderSidebar();
   });
-
-  document.getElementById("btnNewList").addEventListener("click", async function () {
+  var newListButton = document.getElementById("btnNewList");
+  if (newListButton) newListButton.addEventListener("click", async function () {
     if (!(await confirmLeave())) return;
     openNewListWizard();
   });
-
-  document.getElementById("listNav").addEventListener("click", async function (e) {
+  var listNav = document.getElementById("listNav");
+  if (listNav) listNav.addEventListener("click", async function (e) {
     var btn = e.target.closest(".list-item");
     if (!btn) return;
-    if (btn.dataset.id === State.currentListId) { closeSidebar(); return; }
+    if (btn.dataset.id === State.currentListId) return;
     if (!(await confirmLeave())) return;
     loadList(btn.dataset.id);
-    closeSidebar();
   });
 
-  /* 햄버거 — 좁은 화면에서는 열고/닫고, 넓은 화면에서는 접고/펴기 */
-  document.getElementById("btnSidebar").addEventListener("click", function () {
-    if (isNarrow()) {
-      document.body.classList.toggle("sidebar-open");
-    } else {
-      var collapsed = document.body.classList.toggle("sidebar-collapsed");
-      try { localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0"); } catch (e) { /* 무시 */ }
-    }
+  var sidebarButton = document.getElementById("btnSidebar");
+  if (sidebarButton) sidebarButton.addEventListener("click", function () {
+    if (isNarrow()) document.body.classList.toggle("sidebar-open");
+    else document.body.classList.toggle("sidebar-collapsed");
   });
-  document.getElementById("sidebarDim").addEventListener("click", closeSidebar);
+  var sidebarDim = document.getElementById("sidebarDim");
+  if (sidebarDim) sidebarDim.addEventListener("click", closeSidebar);
+
+  /* 개요 화면의 리스트 선택·행 이동 */
+  var overviewBody = document.getElementById("overviewBody");
+  if (overviewBody) overviewBody.addEventListener("change", function (event) {
+    var checkbox = event.target.closest(".overview-select"), row = event.target.closest("tr[data-list-id]");
+    if (!checkbox || !row) return;
+    if (checkbox.checked) State.listSelected[row.dataset.listId] = true;
+    else delete State.listSelected[row.dataset.listId];
+    UI.renderListOverview();
+  });
+  if (overviewBody) overviewBody.addEventListener("click", async function (event) {
+    var row = event.target.closest("tr[data-list-id]");
+    if (!row || event.target.closest("button, a, input, select, textarea, label")) return;
+    if (!(await confirmLeave())) return;
+    await loadList(row.dataset.listId);
+  });
+  var recentList = document.getElementById("recentList");
+  if (recentList) recentList.addEventListener("click", async function (event) {
+    var item = event.target.closest("[data-list-id]");
+    if (!item || !(await confirmLeave())) return;
+    await loadList(item.dataset.listId);
+  });
+  var overviewAll = document.getElementById("overviewCheckAll");
+  if (overviewAll) overviewAll.addEventListener("change", function () {
+    State.listSelected = {};
+    if (overviewAll.checked) (State.lists || []).forEach(function (list) { State.listSelected[list.id] = true; });
+    UI.renderListOverview();
+  });
+  var backOverview = document.getElementById("btnBackOverview");
+  if (backOverview) backOverview.addEventListener("click", async function (event) {
+    event.preventDefault();
+    if (!(await confirmLeave())) return;
+    showOverview();
+  });
+  var overviewAdd = document.getElementById("btnOverviewAdd");
+  if (overviewAdd) overviewAdd.addEventListener("click", function () { createListFromOverview("manual"); });
+  var overviewImport = document.getElementById("btnOverviewImport");
+  if (overviewImport) overviewImport.addEventListener("click", function () { createListFromOverview("excel"); });
+  var overviewEdit = document.getElementById("btnOverviewEdit");
+  if (overviewEdit) overviewEdit.addEventListener("click", async function () {
+    var ids = selectedListIds(); if (ids.length !== 1) return;
+    await loadList(ids[0]);
+    var info = document.getElementById("btnListInfo"); if (info) info.click();
+  });
+  var overviewCopy = document.getElementById("btnOverviewCopy");
+  if (overviewCopy) overviewCopy.addEventListener("click", duplicateSelectedLists);
+  var overviewDelete = document.getElementById("btnOverviewDelete");
+  if (overviewDelete) overviewDelete.addEventListener("click", deleteSelectedLists);
 
   /* 리스트 정보 모달 */
   var listTitle = document.getElementById("listTitle");
   var listDate = document.getElementById("listDate");
   var listAuthor = document.getElementById("listAuthor");
+  var listNote = document.getElementById("listNote");
   var listInfo = document.getElementById("listInfoModal");
-  var closeListInfo = function () { if (listInfo) listInfo.hidden = true; };
+  var closeListInfo = function () { if (listInfo) listInfo.hidden = true; listInfoDraft = null; };
   if (listTitle) listTitle.addEventListener("input", function (e) {
-    if (!State.list) return;
-    State.list.title = e.target.value;
-    var titleDisplay = document.getElementById("listTitleDisplay");
-    if (titleDisplay) titleDisplay.textContent = e.target.value;
-    setDirty(true);
+    if (listInfoDraft) listInfoDraft.title = e.target.value;
   });
   if (listDate) listDate.addEventListener("change", function (e) {
-    if (!State.list) return;
-    State.list.work_date = e.target.value;
-    setDirty(true);
+    if (listInfoDraft) listInfoDraft.work_date = e.target.value;
   });
   if (listAuthor) listAuthor.addEventListener("input", function (e) {
-    if (!State.list) return;
-    State.list.author = e.target.value;
-    setDirty(true);
+    if (listInfoDraft) listInfoDraft.author = e.target.value;
+  });
+  if (listNote) listNote.addEventListener("input", function (e) {
+    if (listInfoDraft) listInfoDraft.note = e.target.value;
   });
   var listInfoButton = document.getElementById("btnListInfo");
   if (listInfoButton) listInfoButton.addEventListener("click", function () {
@@ -303,6 +424,8 @@ function bindEvents() {
     listTitle.value = State.list.title || "";
     listDate.value = State.list.work_date || "";
     listAuthor.value = State.list.author || "";
+    if (listNote) listNote.value = State.list.note || "";
+    listInfoDraft = { title: listTitle.value, work_date: listDate.value, author: listAuthor.value, note: listNote ? listNote.value : "" };
     listInfo.hidden = false;
     listTitle.focus();
   });
@@ -311,15 +434,19 @@ function bindEvents() {
   var listInfoCancelSecondary = document.getElementById("listInfoCancelSecondary");
   if (listInfoCancelSecondary) listInfoCancelSecondary.addEventListener("click", closeListInfo);
   var listInfoSave = document.getElementById("listInfoSave");
-  if (listInfoSave) listInfoSave.addEventListener("click", function () {
-    if (!State.list) return;
-    State.list.title = listTitle.value.trim() || "제목 없는 리스트";
-    State.list.work_date = listDate.value;
-    State.list.author = listAuthor.value.trim();
+  if (listInfoSave) listInfoSave.addEventListener("click", async function () {
+    if (!State.list || !listInfoDraft) return;
+    if (!listInfoDraft.work_date) { toast("작성일을 입력해 주세요", "warn"); listDate.focus(); return; }
+    State.list.title = listInfoDraft.title.trim() || "제목 없는 리스트";
+    State.list.work_date = listInfoDraft.work_date;
+    State.list.author = listInfoDraft.author.trim();
+    State.list.note = listInfoDraft.note.trim();
     setDirty(true);
-    UI.renderHead();
-    closeListInfo();
-    toast("리스트 정보를 반영했습니다. 상단 저장하기를 눌러 공유하세요.");
+    listInfoSave.disabled = true;
+    toast("리스트 정보를 저장하는 중입니다");
+    var ok = await save();
+    listInfoSave.disabled = false;
+    if (ok) closeListInfo();
   });
   if (listInfo) listInfo.addEventListener("click", function (event) { if (event.target === listInfo) closeListInfo(); });
 
@@ -656,7 +783,9 @@ function bindImport() {
     });
   });
 
-  document.getElementById("fileInput").addEventListener("change", async function (e) {
+  var fileInput = document.getElementById("fileInput");
+  if (!fileInput) return;
+  fileInput.addEventListener("change", async function (e) {
     var file = e.target.files && e.target.files[0];
     e.target.value = "";                       // 같은 파일을 다시 고를 수 있도록 비웁니다
     if (!file) return;
@@ -722,7 +851,7 @@ function closeImportModal() {
   pendingImport = null;
 }
 
-function applyImport() {
+async function applyImport() {
   if (!pendingImport || !State.list) return;
   var mode = document.querySelector('input[name="imMode"]:checked').value;
   var items = pendingImport.items;
@@ -745,7 +874,8 @@ function applyImport() {
   setDirty(true);
   closeImportModal();
   UI.renderAll();
-  toast(items.length + "개 행을 불러왔습니다 — 확인 후 저장하세요");
+  toast(items.length + "개 행을 저장하는 중입니다");
+  await save();
 }
 
 /* ---------- 실시간 동기화 ---------- */
@@ -828,6 +958,5 @@ function onRemote() {
   UI.renderAll();
   var requested = new URLSearchParams(location.search).get('list');
   if (requested) await loadList(requested);
-  else if (State.lists.length) await loadList(State.lists[0].id);
   startRealtime();
 })();

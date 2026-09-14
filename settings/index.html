@@ -15,8 +15,9 @@
   <div class="gnb-left"><a class="brand-lockup" href="../edit/"><img src="../assets/callto-logo.svg" alt=""><span>CALLTO</span></a></div>
   <nav class="gnb-nav" aria-label="주요 화면">
     <a class="gnb-link" data-route="edit" href="../edit/">상품 리스트</a>
-    <a class="gnb-link" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 설정</a>
-    <a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">카테고리 설정</a>
+    <a class="gnb-link" data-route="indexing" href="../indexing/">상품 인덱싱</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 관리</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">설정</a>
   </nav>
   <div class="gnb-right"><span id="settingsState" class="sync-state">불러오는 중…</span><button id="saveSettings" class="btn btn-primary" disabled>설정 저장</button></div>
 </header>
@@ -45,6 +46,7 @@
       <label class="field">브랜드 코드<input id="brandCode" maxlength="20" pattern="[A-Za-z0-9_\-]{1,20}" placeholder="165"><span class="field-note">고도몰 브랜드 코드(선택 입력)입니다.</span></label>
       <label class="field">한글 검색명<input id="brandAliases" maxlength="300" placeholder="록스톤, 틸타"><span class="field-note">쉼표로 구분하면 이름·코드와 함께 검색됩니다. 초성은 자동으로 계산합니다. 검색명은 실제 브랜드명과 자동화 코드에 영향을 주지 않습니다.</span></label>
       <label class="check-line"><input id="brandActive" type="checkbox" checked><span>새 상품에서 선택 가능</span></label>
+      <label class="check-line"><input id="brandIndexing" type="checkbox"><span>상품 인덱싱에서 사용</span></label>
       <div class="action-row"><button class="btn btn-primary" type="submit">변경 반영</button><button class="btn btn-neutral" id="newBrand" type="button">새 브랜드</button><button class="btn btn-danger-ghost" id="deleteBrand" type="button" hidden>삭제</button></div>
       <p class="field-note">변경 반영 후 상단 설정 저장을 눌러야 다른 사용자에게 적용됩니다.</p>
     </form></div>

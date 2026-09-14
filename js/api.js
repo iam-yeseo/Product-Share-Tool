@@ -8,30 +8,48 @@ var Api = (function () {
     return res.data;
   }
 
-  /* 사이드바용 리스트 전체 (등록일 내림차순) + 행 개수/완료 개수 */
+  /* 상품 리스트 개요용 목록 + 몰별 요청/완료 집계 */
   async function fetchLists() {
     var lists = check(
       await supabaseClient
         .from("product_lists")
-        .select("id,title,author,work_date,created_at")
-        .order("created_at", { ascending: false })
+        .select("id,title,author,work_date,created_at,updated_at,note")
+        .order("updated_at", { ascending: false })
     );
 
     var stats = check(
-      await supabaseClient.from("product_items").select("list_id,done")
+      await supabaseClient.from("product_items").select("id,list_id,done,need_retail,need_wholesale,need_naver")
+    );
+    var registrations = check(
+      await supabaseClient.from("product_registrations")
+        .select("item_id,channel,status,product_items!inner(list_id,need_retail,need_wholesale,need_naver)")
     );
 
     var map = {};
     stats.forEach(function (r) {
-      if (!map[r.list_id]) map[r.list_id] = { total: 0, done: 0 };
-      map[r.list_id].total++;
-      if (r.done) map[r.list_id].done++;
+      if (!map[r.list_id]) map[r.list_id] = { total: 0, done: 0, retail: { done: 0, total: 0 }, wholesale: { done: 0, total: 0 }, naver: { done: 0, total: 0 }, failed: false };
+      var list = map[r.list_id];
+      list.total++;
+      if (r.done) list.done++;
+      ["retail", "wholesale", "naver"].forEach(function (channel) {
+        if (r["need_" + channel] === "필요") list[channel].total++;
+      });
+    });
+    registrations.forEach(function (r) {
+      var listId = r.product_items && r.product_items.list_id, channel = r.channel;
+      if (!listId || !map[listId] || !map[listId][channel]) return;
+      if (r.status === "success") map[listId][channel].done++;
+      if (r.status === "failed") map[listId].failed = true;
     });
 
     lists.forEach(function (l) {
-      var s = map[l.id] || { total: 0, done: 0 };
+      var s = map[l.id] || { total: 0, done: 0, retail: { done: 0, total: 0 }, wholesale: { done: 0, total: 0 }, naver: { done: 0, total: 0 }, failed: false };
       l.total = s.total;
       l.doneCount = s.done;
+      l.channels = { retail: s.retail, wholesale: s.wholesale, naver: s.naver };
+      var required = s.retail.total + s.wholesale.total;
+      var complete = s.retail.done + s.wholesale.done;
+      l.progressState = s.failed ? "실패" : required === 0 ? (s.naver.total ? "—" : "미시작") : complete === required ? "완료" : complete > 0 ? "진행 중" : "미시작";
     });
     return lists;
   }
@@ -149,6 +167,23 @@ var Api = (function () {
     );
   }
 
+  /* 상품 인덱싱 */
+  async function fetchIndexing() {
+    return check(await supabaseClient.from("product_indexing").select("*").order("updated_at", { ascending: false }));
+  }
+
+  async function createIndexing(payload) {
+    return check(await supabaseClient.from("product_indexing").insert(payload).select().single());
+  }
+
+  async function updateIndexing(id, payload) {
+    return check(await supabaseClient.from("product_indexing").update(Object.assign({}, payload, { updated_at: new Date().toISOString() })).eq("id", id).select().single());
+  }
+
+  async function deleteIndexing(id) {
+    check(await supabaseClient.from("product_indexing").delete().eq("id", id));
+  }
+
   async function fetchAutomationSettings() {
     var row = check(await supabaseClient.from("app_settings").select("value,updated_at").eq("key", "product_automation_v1").single());
     // 공용 설정에 brands 키가 아직 없으면(마이그레이션 미적용) 배포된 기본 브랜드 목록을 씁니다.
@@ -181,6 +216,10 @@ var Api = (function () {
     saveDraft: saveDraft,
     setDone: setDone,
     fetchHiddenCols: fetchHiddenCols,
-    saveHiddenCols: saveHiddenCols
+    saveHiddenCols: saveHiddenCols,
+    fetchIndexing: fetchIndexing,
+    createIndexing: createIndexing,
+    updateIndexing: updateIndexing,
+    deleteIndexing: deleteIndexing
   };
 })();

@@ -153,7 +153,8 @@ var BulkEditor = (function () {
         toast('직접 입력할 브랜드명을 입력해 주세요','warn'); document.querySelector('[data-bulk-brand-custom]').focus(); return;
       }
       applyChanges(targets,changes,AutomationEditor.settings());
-      setDirty(true); UI.renderGrid(); close(); toast(targets.length + '개 상품에 ' + keys.length + '개 설정을 적용했습니다');
+      setDirty(true); UI.renderGrid(); close(); toast(targets.length + '개 상품을 저장하는 중입니다');
+      if (typeof save === 'function') save();
     });
   }
   if (typeof document !== 'undefined') document.addEventListener('DOMContentLoaded',init);

@@ -291,8 +291,9 @@ var AutomationEditor = (function () {
     closeDialog(document.getElementById('automationDialog'), function () {
       activeId = null; activeOriginal = null; draft = null; isNew = false; choice = null;
       restoreFocus();
+      if (typeof save === 'function') save();
     });
-    toast('상품이 목록에 반영되었습니다. 상단 저장하기를 눌러 공유하세요.');
+    toast('상품을 저장하고 동기화하는 중입니다.');
   }
 
   async function checkImage(item, image) {

@@ -93,6 +93,7 @@
     byId('brandCode').value = chosen ? (chosen.code || '') : '';
     byId('brandAliases').value = chosen ? (chosen.aliases || []).join(', ') : '';
     byId('brandActive').checked = !chosen || chosen.active !== false;
+    byId('brandIndexing').checked = !!(chosen && chosen.indexing_enabled === true);
     byId('deleteBrand').hidden = !chosen;
     formDirty = false;
   }
@@ -100,8 +101,8 @@
     if (!byId('brandForm').reportValidity()) return false;
     var candidate = AutomationCore.clone(config), rows = brandsOf(candidate);
     var aliases = byId('brandAliases').value.split(',').map(function (v) { return v.trim(); }).filter(Boolean);
-    var value = { code: byId('brandCode').value.trim(), name: byId('brandName').value.trim(), aliases: aliases, active: byId('brandActive').checked };
     var old = brandSelected ? rows.find(function (b) { return AutomationCore.brandKey(b.name) === brandSelected; }) : null;
+    var value = { id: old && old.id ? old.id : uuid(), code: byId('brandCode').value.trim(), name: byId('brandName').value.trim(), aliases: aliases, active: byId('brandActive').checked, indexing_enabled: byId('brandIndexing').checked };
     if (old) Object.assign(old, value); else rows.push(value);
     try { AutomationCore.validateSettings(candidate); } catch (e) { toast(e.message, 'error'); return false; }
     config = candidate; brandSelected = AutomationCore.brandKey(value.name); mark(); brandTree(); brandPopulate(); return true;

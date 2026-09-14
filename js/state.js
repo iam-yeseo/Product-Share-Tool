@@ -4,7 +4,7 @@
 
 var State = {
   view: "editor",        // 'editor' | 'registrar'
-  lists: [],             // 사이드바 목록 (등록일 내림차순)
+  lists: [],             // 상품 리스트 개요 (최근 수정순)
   search: "",
   currentListId: null,
   list: null,            // 현재 리스트 메타(초안)
@@ -12,6 +12,7 @@ var State = {
   baseIds: [],           // 마지막으로 서버에서 읽어온 행 id 목록 (삭제 판별용)
   baseItemIds: {},       // id -> true (신규/기존 행 판별용)
   selected: {},          // 편집자 뷰에서 체크한 행 (id -> true) — 등록 완료 상태와 무관
+  listSelected: {},      // 상품 리스트 개요에서 선택한 리스트
   dirty: false,
   remoteChanged: false,  // 편집 중 다른 사람이 서버 데이터를 바꿨는지
   hiddenCols: [],        // 보기 뷰에서 숨길 열 key 목록 (전역 공유)

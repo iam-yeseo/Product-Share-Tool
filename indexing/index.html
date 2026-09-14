@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>상품 인덱싱 · CALLTO</title>
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/automation.css">
+</head>
+<body class="indexing-page" data-page="indexing">
+<header class="gnb">
+  <div class="gnb-left"><a class="brand-lockup" href="../edit/"><img src="../assets/callto-logo.svg" alt=""><span>CALLTO</span></a></div>
+  <nav class="gnb-nav" aria-label="주요 화면">
+    <a class="gnb-link" data-route="edit" href="../edit/">상품 리스트</a>
+    <a class="gnb-link is-active" data-route="indexing" href="../indexing/" aria-current="page">상품 인덱싱</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 관리</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">설정</a>
+  </nav>
+  <div class="gnb-right"><span id="indexingSyncState" class="sync-state">연결 중…</span></div>
+</header>
+
+<main class="indexing-main">
+  <section class="indexing-intro">
+    <div><h1>상품 인덱싱</h1><p>자주 사용하는 상품을 인덱싱하여 작업 효율을 높일 수 있습니다.</p></div>
+    <div class="action-row"><button id="indexingMdImport" class="btn btn-outline" type="button" disabled aria-disabled="true">MD 불러오기</button><button id="indexingAdd" class="btn btn-primary" type="button">＋ 직접 추가하기</button></div>
+  </section>
+  <div class="indexing-layout">
+    <aside class="brand-filter" aria-label="브랜드 필터">
+      <div class="brand-filter-head"><h2>브랜드 리스트</h2><a class="btn btn-text btn-sm" href="../settings/?tab=brands">브랜드 추가하기</a></div>
+      <div id="indexingBrands" class="brand-filter-list"><p class="overview-placeholder">불러오는 중…</p></div>
+    </aside>
+    <section class="indexing-content" aria-live="polite"><div id="indexingCards" class="indexing-cards"><p class="overview-placeholder">상품을 불러오는 중…</p></div></section>
+  </div>
+</main>
+
+<dialog id="indexingModal" class="app-dialog indexing-dialog" aria-labelledby="indexingModalTitle">
+  <div class="dialog-shell">
+    <header class="dialog-head"><h2 id="indexingModalTitle">상품 인덱싱 추가</h2></header>
+    <form id="indexingForm">
+      <div class="dialog-body indexing-dialog-body">
+        <label class="field"><span>상품명</span><input id="indexingName" required maxlength="120" placeholder="상품명 입력"></label>
+        <label class="field"><span>브랜드</span><select id="indexingBrand" required><option value="">브랜드 선택</option></select></label>
+
+        <section class="indexing-form-section"><div class="section-heading"><div><h3>상세페이지 태그</h3><p class="field-note">이미지 주소로 HTML을 만들거나 최종 HTML을 직접 편집할 수 있습니다.</p></div></div>
+          <div id="indexingImageRows" class="indexing-image-rows"></div>
+          <div class="action-row"><button id="indexingAddImage" class="btn btn-neutral" type="button">＋ 이미지 추가</button><button id="indexingGenerateHtml" class="btn btn-outline" type="button">이미지에서 HTML 다시 생성</button></div>
+          <label class="field"><span>최종 HTML 원문</span><textarea id="indexingHtml" rows="8" required spellcheck="false" placeholder="HTML을 입력하거나 위 버튼으로 생성하세요."></textarea><span id="indexingHtmlMode" class="field-note">생성된 HTML</span></label>
+        </section>
+
+        <section class="indexing-form-section"><h3>상품 등록 여부</h3>
+          <div class="indexing-channel-row"><label class="check-line"><input id="indexingRetailEnabled" type="checkbox"><span>소비자몰</span></label><input id="indexingRetailUrl" type="url" placeholder="소비자몰 주소를 입력하세요."></div>
+          <div class="indexing-channel-row"><label class="check-line"><input id="indexingWholesaleEnabled" type="checkbox"><span>도매몰</span></label><input id="indexingWholesaleUrl" type="url" placeholder="도매몰 주소를 입력하세요."></div>
+          <div class="indexing-channel-row"><label class="check-line"><input id="indexingSmartstoreEnabled" type="checkbox"><span>스마트스토어</span></label><input id="indexingSmartstoreUrl" type="url" placeholder="스마트스토어 주소를 입력하세요."></div>
+        </section>
+        <p id="indexingFormError" class="settings-error" hidden></p>
+      </div>
+      <footer class="dialog-foot"><button id="indexingCancel" class="btn btn-outline" type="button">취소</button><button id="indexingSave" class="btn btn-primary" type="submit">상품 등록</button></footer>
+    </form>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/animejs@3.2.2/lib/anime.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.115.0"></script>
+<script src="../js/supabaseClient.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/motion.js"></script>
+<script src="../js/automation-core.js"></script>
+<script src="../js/brand-defaults.js"></script>
+<script src="../js/api.js"></script>
+<script src="../js/indexing.js"></script>
+</body>
+</html>

@@ -13,33 +13,31 @@
 <body class="view-registrar" data-page="view">
 <header class="gnb">
   <div class="gnb-left">
-    <button id="btnSidebar" class="icon-btn" title="목록 열기 / 접기" aria-label="목록 열기 / 접기">☰</button>
     <a class="brand-lockup" href="../edit/"><img src="../assets/callto-logo.svg" alt=""><span>CALLTO</span></a>
   </div>
   <nav class="gnb-nav" aria-label="주요 화면">
     <a class="gnb-link" data-route="edit" href="../edit/">상품 리스트</a>
-    <a class="gnb-link" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 설정</a>
-    <a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">카테고리 설정</a>
+    <a class="gnb-link" data-route="indexing" href="../indexing/">상품 인덱싱</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="brands" href="../settings/?tab=brands">브랜드 관리</a>
+    <a class="gnb-link" data-route="settings" data-settings-tab="categories" href="../settings/?tab=categories">설정</a>
   </nav>
   <div class="gnb-right">
     <span id="syncState" class="sync-state">연결 중…</span>
     <span id="dirtyBadge" class="dirty-badge" hidden>저장 안 됨</span>
-    <button id="btnSave" class="btn btn-primary only-editor" disabled>저장하기</button>
   </div>
 </header>
 
 <div class="layout">
-  <aside class="sidebar" id="sidebar" aria-label="리스트">
-    <div class="side-top">
-      <button id="btnNewList" class="only-editor btn btn-primary btn-block">새 리스트 추가하기</button>
-      <button id="btnImportSide" class="only-editor btn btn-outline btn-block">엑셀 불러오기</button>
-      <label class="search-box"><span class="sr-only">리스트 검색</span><input id="searchInput" type="search" placeholder="리스트 검색" autocomplete="off"></label>
-    </div>
-    <nav id="listNav" class="list-nav" aria-label="저장된 리스트"><p class="empty-hint">불러오는 중…</p></nav>
-  </aside>
-  <div class="sidebar-dim" id="sidebarDim"></div>
-
   <main class="main">
+    <section id="listOverview" class="list-overview">
+      <div class="overview-head">
+        <div><h1 class="overview-title">상품 리스트</h1><p class="overview-lead">등록 요청 상품 리스트를 확인할 수 있습니다.</p></div>
+        <div class="overview-actions only-editor"><button id="btnOverviewImport" class="btn btn-outline">엑셀 불러오기</button><button id="btnOverviewAdd" class="btn btn-primary">＋ 직접 추가하기</button></div>
+      </div>
+      <div class="overview-tools only-editor"><div class="overview-selection" id="overviewSelection"></div><button id="btnOverviewEdit" class="btn btn-neutral" disabled>수정</button><button id="btnOverviewCopy" class="btn btn-neutral" disabled>복제</button><button id="btnOverviewDelete" class="btn btn-neutral" disabled>삭제</button></div>
+      <div class="overview-grid-wrap" role="region" aria-label="상품 리스트 표"><table class="overview-grid"><thead><tr><th><input type="checkbox" id="overviewCheckAll" aria-label="전체 리스트 선택"></th><th>등록일</th><th>리스트 이름</th><th>등록자</th><th colspan="3">등록 요청 건수</th><th>작업 진행</th><th>비고</th></tr><tr class="overview-subhead"><th></th><th></th><th></th><th></th><th>소매</th><th>도매</th><th>네이버</th><th></th><th></th></tr></thead><tbody id="overviewBody"><tr class="row-empty"><td colspan="9">불러오는 중…</td></tr></tbody></table></div>
+      <div class="overview-side"><section class="overview-panel"><h2>최근 수정된 항목</h2><div id="recentList"><p class="overview-placeholder">불러오는 중…</p></div></section><section class="overview-panel"><h2>메시지</h2><p class="overview-placeholder">메시지 기능은 준비 중입니다.</p></section></div>
+    </section>
     <section id="emptyState" class="empty-state">
       <div class="empty-icon" aria-hidden="true">＋</div>
       <h1>리스트를 선택하세요</h1>
@@ -48,6 +46,7 @@
 
     <section id="listPane" hidden>
       <div class="list-head">
+        <a id="btnBackOverview" class="back-link" href="../edit/">‹ 리스트로 돌아가기</a>
         <div class="list-title-line">
           <div class="title-group">
             <h1 id="listTitleDisplay" class="title-display">제목 없는 리스트</h1>
@@ -102,7 +101,7 @@
           <tbody id="gridBody"></tbody>
         </table>
       </div>
-      <p class="scroll-hint" id="scrollHint">체크·No.·브랜드·상품명 열은 왼쪽에 고정되고, 모델명부터 오른쪽 열만 가로로 스크롤됩니다.</p>
+      <p class="scroll-hint" id="scrollHint">체크·순번·브랜드·모델명·상품명 열은 왼쪽에 고정되고, 등록 필요부터 오른쪽 열만 가로로 스크롤됩니다.</p>
     </section>
   </main>
 </div>
@@ -112,9 +111,10 @@
   <h2 class="modal-title">리스트 정보</h2>
   <label class="field">리스트 이름<input id="listTitle" maxlength="80" placeholder="리스트 제목"></label>
   <label class="field">작성일<input id="listDate" type="date"></label>
-  <input id="listAuthor" type="text" aria-hidden="true" tabindex="-1" hidden>
+  <label class="field">등록자<input id="listAuthor" type="text" maxlength="40" placeholder="등록자 이름"></label>
+  <label class="field">비고<textarea id="listNote" rows="3" maxlength="300" placeholder="리스트에 남길 메모"></textarea></label>
   <div class="modal-danger-zone"><button id="btnDeleteList" class="btn btn-danger-ghost only-editor">리스트 삭제</button></div>
-  <div class="modal-foot"><button id="listInfoCancelSecondary" class="btn btn-neutral">취소</button><button id="listInfoSave" class="btn btn-primary">정보 반영</button></div>
+  <div class="modal-foot"><button id="listInfoCancelSecondary" class="btn btn-neutral">취소</button><button id="listInfoSave" class="btn btn-primary">저장</button></div>
 </div></div>
 
 <div id="importModal" class="modal" hidden><div class="modal-box">
@@ -126,7 +126,7 @@
     <label><input type="radio" name="imMode" value="replace" checked> <span>지금 표를 <b>지우고</b> 새로 채우기</span></label>
     <label><input type="radio" name="imMode" value="append"> <span>지금 표 아래에 이어 붙이기</span></label>
   </div>
-  <p class="modal-hint">불러온 뒤 상단 저장하기를 눌러야 실제로 저장됩니다.</p>
+  <p class="modal-hint">불러오기를 확정하면 리스트에 바로 저장됩니다.</p>
   <div class="modal-foot"><button id="imApply" class="btn btn-primary">불러오기</button></div>
 </div></div>
 
@@ -178,7 +178,7 @@
     </header>
     <div id="autoBody" class="dialog-body"></div>
     <footer class="dialog-foot">
-      <span class="foot-note">목록에 반영한 뒤 상단 <b>저장하기</b>를 눌러야 공유됩니다.</span>
+      <span class="foot-note">완료하면 입력한 상품이 자동으로 저장되고 동기화됩니다.</span>
       <button id="autoCancel" class="btn btn-outline">취소</button>
       <button id="autoSave" class="btn btn-primary only-editor">상품 등록</button>
     </footer>
