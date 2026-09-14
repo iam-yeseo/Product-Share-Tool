@@ -17,8 +17,8 @@ var UI = (function () {
     { key: 'check', label: '체크', cls: 'c-check' },
     { key: 'seq', label: 'No.', cls: 'c-seq' },
     { key: 'brand', label: '브랜드', cls: 'c-brand' },
-    { key: 'name_own', label: '상품명', cls: 'c-name' },
     { key: 'model', label: '모델명', cls: 'c-model' },
+    { key: 'name_own', label: '상품명', cls: 'c-name' },
     { key: 'need_retail', label: '소매', group: '등록 필요', cls: 'c-need' },
     { key: 'need_wholesale', label: '도매', group: '등록 필요', cls: 'c-need' },
     { key: 'need_naver', label: '네이버', group: '등록 필요', cls: 'c-need' },
@@ -30,7 +30,7 @@ var UI = (function () {
     { key: 'act', label: '편집', cls: 'c-act' },
     { key: 'note', label: '비고', cls: 'c-note' }
   ];
-  var WIDE_PINS = ['check', 'seq', 'brand', 'name_own'];
+  var WIDE_PINS = ['check', 'seq', 'brand', 'model', 'name_own'];
   var COPY_LABELS = {
     brand: '브랜드 복사', name_own: '상품명 복사', name_naver: '스마트스토어 상품명 복사', model: '모델명 복사',
     price_retail: '소매 판매가 복사', price_wholesale: '도매(베이직) 금액 복사',
@@ -137,6 +137,65 @@ var UI = (function () {
         '<span class="tag tag-count" data-list-count title="완료 상품 수 / 전체 상품 수">' + esc(countLabel(counts)) + '</span>' +
         '</button>';
     }).join('');
+  }
+
+  /* ---------- 상품 리스트 개요 ---------- */
+  function overviewCount(list, channel) {
+    var value = list && list.channels && list.channels[channel];
+    if (!value) return channel === 'naver' ? '—' : '0/0';
+    if (channel === 'naver') return value.total ? '—/' + String(value.total) : '—';
+    return String(value.done || 0) + '/' + String(value.total || 0);
+  }
+  function overviewStatus(list) {
+    var state = list && list.progressState || '미시작';
+    var klass = state === '완료' ? 'tag-need' : state === '실패' ? 'tag-warn' : 'tag-noneed';
+    return '<span class="tag ' + klass + '">' + esc(state) + '</span>';
+  }
+  function renderOverviewToolbar() {
+    var selected = Object.keys(State.listSelected || {}).filter(function (id) { return State.listSelected[id]; }).length;
+    var label = document.getElementById('overviewSelection');
+    if (label) label.textContent = selected ? '선택 ' + selected + '건' : '';
+    var edit = document.getElementById('btnOverviewEdit');
+    var copy = document.getElementById('btnOverviewCopy');
+    var remove = document.getElementById('btnOverviewDelete');
+    if (edit) edit.disabled = selected !== 1;
+    if (copy) copy.disabled = selected < 1;
+    if (remove) remove.disabled = selected < 1;
+    var all = document.getElementById('overviewCheckAll');
+    if (all) {
+      all.checked = !!State.lists.length && selected === State.lists.length;
+      all.indeterminate = selected > 0 && selected < State.lists.length;
+    }
+  }
+  function renderListOverview() {
+    var body = document.getElementById('overviewBody');
+    if (!body) return;
+    var rows = State.lists || [];
+    if (!rows.length) {
+      body.innerHTML = '<tr class="row-empty"><td colspan="9"><strong>아직 상품 리스트가 없습니다.</strong><br><span>직접 추가하기 또는 엑셀 불러오기로 첫 리스트를 만들어 보세요.</span></td></tr>';
+    } else {
+      body.innerHTML = rows.map(function (list) {
+        var selected = !!(State.listSelected && State.listSelected[list.id]);
+        return '<tr class="overview-row' + (selected ? ' is-selected' : '') + '" data-list-id="' + esc(list.id) + '">' +
+          '<td class="overview-check"><input type="checkbox" class="overview-select"' + (selected ? ' checked' : '') + ' aria-label="리스트 선택"></td>' +
+          '<td>' + esc(fmtDate(list.work_date || list.created_at)) + '</td>' +
+          '<td class="overview-title"><span title="' + esc(list.title || '') + '">' + esc(list.title || '제목 없는 리스트') + '</span></td>' +
+          '<td>' + esc(list.author || '—') + '</td>' +
+          '<td>' + esc(overviewCount(list, 'retail')) + '</td>' +
+          '<td>' + esc(overviewCount(list, 'wholesale')) + '</td>' +
+          '<td>' + esc(overviewCount(list, 'naver')) + '</td>' +
+          '<td>' + overviewStatus(list) + '</td>' +
+          '<td class="overview-note">' + esc(list.note || '—') + '</td>' +
+        '</tr>';
+      }).join('');
+    }
+    var recent = document.getElementById('recentList');
+    if (recent) {
+      recent.innerHTML = rows.slice(0, 5).map(function (list) {
+        return '<button type="button" class="recent-item" data-list-id="' + esc(list.id) + '"><span>' + esc(list.title || '제목 없는 리스트') + '</span><small>' + esc(fmtDateTime(list.updated_at || list.created_at)) + '</small></button>';
+      }).join('') || '<p class="overview-placeholder">최근 수정된 항목이 없습니다.</p>';
+    }
+    renderOverviewToolbar();
   }
   /* 완료 처리·추가·삭제 직후에도 목록을 다시 그리지 않고 숫자만 갱신합니다. */
   function updateListCounts() {
@@ -310,7 +369,7 @@ var UI = (function () {
     var hint = document.getElementById('scrollHint');
     if (hint) hint.textContent = pinMode === 'name'
       ? '화면이 좁아 상품명 열만 왼쪽에 고정됩니다. 체크·No.·브랜드를 포함한 나머지 열은 가로로 스크롤해 사용하세요.'
-      : '체크·No.·브랜드·상품명 열은 왼쪽에 고정되고, 모델명부터 오른쪽 열만 가로로 스크롤됩니다.';
+      : '체크·순번·브랜드·모델명·상품명 열은 왼쪽에 고정되고, 등록 필요부터 오른쪽 열만 가로로 스크롤됩니다.';
     renderToolbar();
     updateListCounts();
     if (typeof AutomationEditor !== 'undefined' && AutomationEditor.publish) AutomationEditor.publish();
@@ -342,9 +401,12 @@ var UI = (function () {
     renderSidebar();
     var has = !!State.currentListId;
     var empty = document.getElementById('emptyState'), pane = document.getElementById('listPane');
-    if (empty) empty.hidden = has;
+    var overview = document.getElementById('listOverview');
+    if (overview) overview.hidden = has;
+    if (empty) empty.hidden = has || !!overview;
     if (pane) pane.hidden = !has;
     if (has) { renderHead(); renderGrid(); }
+    else renderListOverview();
   }
   function setSync(text, kind) {
     var el = document.getElementById('syncState');
@@ -352,7 +414,7 @@ var UI = (function () {
   }
 
   return {
-    renderAll: renderAll, renderSidebar: renderSidebar, renderGrid: renderGrid, renderHead: renderHead,
+    renderAll: renderAll, renderSidebar: renderSidebar, renderListOverview: renderListOverview, renderOverviewToolbar: renderOverviewToolbar, renderGrid: renderGrid, renderHead: renderHead,
     renderToolbar: renderToolbar, renderHeaderChecks: renderHeaderChecks, updateListCounts: updateListCounts,
     autoFitColumn: autoFitColumn, BRAND_CUSTOM: '__custom__', updateHideStyle: updateHideStyle,
     renderColPanel: renderColPanel, setSync: setSync, applyColWidths: applyColWidths, handleResize: handleResize,
