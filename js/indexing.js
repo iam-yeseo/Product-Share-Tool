@@ -55,7 +55,7 @@
   }
   function imageRow(image, index) {
     var url = imageUrl(image);
-    return '<article class="indexing-image-row" data-image-id="' + esc(image.id) + '"><div class="indexing-image-row-head"><b>이미지 ' + (index + 1) + '</b><div class="action-row"><button type="button" class="icon-action" data-index-image-action="up"' + (index === 0 ? ' disabled' : '') + ' aria-label="위로">↑</button><button type="button" class="icon-action" data-index-image-action="down"' + (index === draft.images.length - 1 ? ' disabled' : '') + ' aria-label="아래로">↓</button><button type="button" class="btn btn-outline btn-sm" data-index-image-action="remove">삭제</button></div></div>' +
+    return '<article class="indexing-image-row" data-image-id="' + esc(image.id) + '"><div class="indexing-image-row-head"><b>이미지 ' + (index + 1) + '</b><div class="action-row"><button type="button" class="icon-action" data-index-image-action="up"' + (index === 0 ? ' disabled' : '') + ' aria-label="위로">↑</button><button type="button" class="icon-action" data-index-image-action="down"' + (index === draft.images.length - 1 ? ' disabled' : '') + ' aria-label="아래로">↓</button><button type="button" class="btn btn-danger-ghost btn-sm" data-index-image-action="remove">삭제</button></div></div>' +
       '<div class="indexing-image-fields"><select data-index-image-field="folder" aria-label="폴더"><option value="">폴더 선택</option>' + ((settings && settings.folders) || []).map(function (folder) { return '<option value="' + esc(folder) + '"' + (image.folder === folder ? ' selected' : '') + '>' + esc(folder) + '</option>'; }).join('') + '</select><input data-index-image-field="filename" value="' + esc(String(image.filename || '').replace(/\.[^.]*$/, '')) + '" placeholder="파일명"><select data-index-image-field="extension" aria-label="확장자">' + AutomationCore.EXTENSIONS.map(function (ext) { return '<option value="' + ext + '"' + (String(image.filename || '').endsWith('.' + ext) ? ' selected' : '') + '>' + ext.toUpperCase() + '</option>'; }).join('') + '</select></div>' +
       '<div class="indexing-image-url"><input readonly value="' + esc(url) + '" placeholder="https://calla.hgodo.com/"><button type="button" class="btn btn-outline btn-sm" data-index-image-copy="' + esc(image.id) + '"' + (url ? '' : ' disabled') + '>주소 복사</button></div>' +
       '<details class="indexing-image-preview"><summary>미리보기</summary><div class="indexing-image-preview-box">' + (url ? '<img src="' + esc(url) + '" alt="이미지 ' + (index + 1) + ' 미리보기" loading="lazy">' : '<span>유효한 이미지 주소가 없습니다.</span>') + '</div></details></article>';
@@ -128,6 +128,12 @@
   }
   function imageAction(event) {
     if (!draft) return;
+    var copyButton = event.target.closest('[data-index-image-copy]');
+    if (copyButton) {
+      var copyImage = draft.images.find(function (candidate) { return candidate.id === copyButton.dataset.indexImageCopy; });
+      if (copyImage) copyText(imageUrl(copyImage));
+      return;
+    }
     var row = event.target.closest('[data-image-id]'); if (!row) return;
     var image = draft.images.find(function (item) { return item.id === row.dataset.imageId; }), index = draft.images.indexOf(image), action = event.target.dataset.indexImageAction;
     if (!image) return;
@@ -148,8 +154,6 @@
       if (copyHtml) { var html = rows.find(function (item) { return item.id === copyHtml.dataset.indexCopyHtml; }); if (html) copyText(html.detail_html || ''); return; }
       var copyUrl = event.target.closest('[data-index-copy-url]');
       if (copyUrl) { var item = rows.find(function (row) { return row.id === copyUrl.dataset.indexCopyUrl; }); if (item) copyText(channelUrl(item, copyUrl.dataset.indexChannel)); return; }
-      var copyImage = event.target.closest('[data-index-image-copy]');
-      if (copyImage && draft) { var image = draft.images.find(function (candidate) { return candidate.id === copyImage.dataset.indexImageCopy; }); if (image) copyText(imageUrl(image)); return; }
       if (id && !event.target.closest('button, a, input, select, textarea')) openModal(rows.find(function (item) { return item.id === id; }));
     });
     document.getElementById('indexingForm').addEventListener('submit', submit);
@@ -182,15 +186,21 @@
   }
   async function init() {
     bind();
-    try {
-      var result = await Promise.all([Api.fetchAutomationSettings(), Api.fetchIndexing()]);
-      settings = AutomationCore.normalizeSettings(result[0].value); rows = result[1] || [];
-      selectedBrand = indexingBrands()[0] ? brandRef(indexingBrands()[0]) : '';
-      document.getElementById('indexingSyncState').textContent = '실시간 동기화 중'; document.getElementById('indexingSyncState').className = 'sync-state sync-ok'; render();
-    } catch (error) {
-      document.getElementById('indexingSyncState').textContent = '동기화 오류'; document.getElementById('indexingSyncState').className = 'sync-state sync-error';
-      document.getElementById('indexingCards').innerHTML = '<div class="indexing-empty"><strong>상품 인덱싱을 불러오지 못했습니다.</strong><p>' + esc(error.message || String(error)) + '</p></div>';
+    var result = await Promise.allSettled([Api.fetchAutomationSettings(), Api.fetchIndexing()]);
+    if (result[0].status === 'fulfilled') settings = AutomationCore.normalizeSettings(result[0].value.value);
+    else settings = { brands: [], folders: [] };
+    if (result[1].status === 'fulfilled') rows = result[1].value || [];
+    selectedBrand = indexingBrands()[0] ? brandRef(indexingBrands()[0]) : '';
+    render();
+    if (result[0].status === 'rejected') {
+      document.getElementById('indexingBrands').innerHTML = '<p class="overview-placeholder">브랜드를 불러오지 못했습니다.<br>' + esc(result[0].reason.message || String(result[0].reason)) + '</p>';
     }
+    if (result[1].status === 'rejected') {
+      document.getElementById('indexingCards').innerHTML = '<div class="indexing-empty"><strong>상품 인덱싱을 불러오지 못했습니다.</strong><p>' + esc(result[1].reason.message || String(result[1].reason)) + '</p></div>';
+    }
+    var hasLoadError = result.some(function (item) { return item.status === 'rejected'; });
+    document.getElementById('indexingSyncState').textContent = hasLoadError ? '동기화 오류' : '실시간 동기화 중';
+    document.getElementById('indexingSyncState').className = 'sync-state ' + (hasLoadError ? 'sync-error' : 'sync-ok');
     supabaseClient.channel('product-indexing').on('postgres_changes', { event: '*', schema: 'public', table: 'product_indexing' }, async function () { try { rows = await Api.fetchIndexing(); render(); } catch (error) {} }).on('postgres_changes', { event: '*', schema: 'public', table: 'app_settings' }, async function (payload) { if (payload && payload.new && payload.new.key === 'product_automation_v1') { try { settings = AutomationCore.normalizeSettings((await Api.fetchAutomationSettings()).value); render(); } catch (error) {} } }).subscribe();
   }
   init();

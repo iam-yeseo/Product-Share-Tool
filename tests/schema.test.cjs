@@ -8,3 +8,12 @@ test('retail regular price migration extends the draft function without completi
  const insert=sql.match(/insert into public\.product_items \(([^)]+)\)/)[1];
  assert.doesNotMatch(insert,/done|done_at/);
 });
+
+test('product indexing migration is exposed through RLS and realtime without definer triggers',()=>{
+ const sql=fs.readFileSync(path.join(__dirname,'../supabase/migrations/20260914000000_product_indexing.sql'),'utf8');
+ assert.match(sql,/create table if not exists public\.product_indexing/);
+ assert.match(sql,/grant select, insert, update, delete on table public\.product_indexing to anon, authenticated/);
+ assert.match(sql,/create policy product_indexing_anon_all/);
+ assert.match(sql,/alter publication supabase_realtime add table public\.product_indexing/);
+ assert.doesNotMatch(sql,/security definer/);
+});

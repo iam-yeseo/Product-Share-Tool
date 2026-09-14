@@ -21,12 +21,13 @@ create table if not exists public.product_indexing (
 create index if not exists product_indexing_brand_ref_idx on public.product_indexing(brand_ref);
 create index if not exists product_indexing_updated_at_idx on public.product_indexing(updated_at desc);
 alter table public.product_indexing enable row level security;
+grant select, insert, update, delete on table public.product_indexing to anon, authenticated;
 drop policy if exists product_indexing_anon_all on public.product_indexing;
 create policy product_indexing_anon_all on public.product_indexing
   for all to anon, authenticated using (true) with check (true);
 
 create or replace function public.touch_product_indexing_updated_at()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger language plpgsql security invoker set search_path = '' as $$
 begin
   new.updated_at = now();
   return new;
@@ -35,6 +36,17 @@ $$;
 drop trigger if exists product_indexing_touch_updated_at on public.product_indexing;
 create trigger product_indexing_touch_updated_at before update on public.product_indexing
 for each row execute function public.touch_product_indexing_updated_at();
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'product_indexing'
+  ) then
+    alter publication supabase_realtime add table public.product_indexing;
+  end if;
+end;
+$$;
 
 create or replace function public.save_product_draft(p_list jsonb, p_items jsonb, p_removed_ids uuid[])
 returns void language plpgsql security invoker set search_path = '' as $$
@@ -56,7 +68,7 @@ $$;
 
 -- Completion checks, automation status updates, and row edits all appear in recent activity.
 create or replace function public.touch_product_list_from_item()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger language plpgsql security invoker set search_path = '' as $$
 begin
   update public.product_lists set updated_at = now() where id = coalesce(new.list_id, old.list_id);
   if tg_op = 'DELETE' then return old; end if;
@@ -68,7 +80,7 @@ create trigger product_items_touch_list after insert or update or delete on publ
 for each row execute function public.touch_product_list_from_item();
 
 create or replace function public.touch_product_list_from_registration()
-returns trigger language plpgsql security definer set search_path = public as $$
+returns trigger language plpgsql security invoker set search_path = '' as $$
 begin
   update public.product_lists set updated_at = now()
   where id = (select list_id from public.product_items where id = coalesce(new.item_id, old.item_id));
